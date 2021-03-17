@@ -3,9 +3,8 @@
  * Derived form https://github.com/nailbuster/esp8266FTPServer
  *
  * AUTHOR:  Renzo Mischianti
- * VERSION: 0.1.0
  *
- * https://www.mischianti.org/
+ * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32
  *
  */
 #ifndef FtpServerKey_h
