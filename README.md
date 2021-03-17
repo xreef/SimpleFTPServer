@@ -16,7 +16,7 @@ Simple FTP Server for
 <!-- /wp:paragraph -->
 
 <!-- wp:image {"align":"center","id":2155} -->
-<div class="wp-block-image"><figure class="aligncenter"><img width="450px" src="https://www.mischianti.org/wp-content/uploads/2019/06/FTPTransferEsp8266-1024x662.jpg" alt="" class="wp-image-2155"/><figcaption>FTP file transfer on esp8266 or esp32</figcaption></figure></div>
+<div class="wp-block-image"><figure class="aligncenter"><img width="450px" src="https://www.mischianti.org/wp-content/uploads/2019/06/FTPTransferEsp8266-1024x662.jpg" alt="" class="wp-image-2155"/><figcaption></figcaption></figure></div>
 <!-- /wp:image -->
 
 <!-- wp:paragraph -->
