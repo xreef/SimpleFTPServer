@@ -1,0 +1,12 @@
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+SimpleFtpServer	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+begin	KEYWORD2
+handleFTP	KEYWORD2
