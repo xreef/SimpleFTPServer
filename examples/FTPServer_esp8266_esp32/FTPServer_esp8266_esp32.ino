@@ -1,3 +1,12 @@
+/*
+ * FtpServer esp8266 and esp32 with SPIFFS
+ *
+ * AUTHOR:  Renzo Mischianti
+ *
+ * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32
+ *
+ */
+
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #elif defined ESP32

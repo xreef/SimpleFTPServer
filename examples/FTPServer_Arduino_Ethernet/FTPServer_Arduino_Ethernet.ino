@@ -1,3 +1,12 @@
+/*
+ * FtpServer Arduino with Ethernet library and w5100 shield
+ *
+ * AUTHOR:  Renzo Mischianti
+ *
+ * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32
+ *
+ */
+
 #include <SPI.h>
 #include <Ethernet.h>
 #include "SD.h"
