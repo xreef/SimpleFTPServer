@@ -27,10 +27,7 @@
 #include "WProgram.h"
 #endif
 
-#if(NETWORK_ESP8266_242 == DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266)
-	#define ARDUINO_ESP8266_RELEASE_2_4_2
-	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266 NETWORK_ESP8266
-#endif
+
 //
 //#if(NETWORK_ESP8266_SD == DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266)
 //	#define ESP8266_GT_2_4_2_SD_STORAGE_SELECTED
@@ -40,7 +37,16 @@
 #if !defined(FTP_SERVER_NETWORK_TYPE)
 // select Network type based
 	#if defined(ESP8266) || defined(ESP31B)
-		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266
+		#if(NETWORK_ESP8266_242 == DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266)
+			#define ARDUINO_ESP8266_RELEASE_2_4_2
+
+			#define FTP_SERVER_NETWORK_TYPE_SELECTED NETWORK_ESP8266_242
+
+			#define FTP_SERVER_NETWORK_TYPE NETWORK_ESP8266
+		#else
+			#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266
+		#endif
+
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_ESP8266
 	#elif defined(ESP32)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
@@ -54,6 +60,11 @@
 	//	#define STORAGE_SD_ENABLED
 	#endif
 #endif
+
+#ifndef FTP_SERVER_NETWORK_TYPE_SELECTED
+	#define FTP_SERVER_NETWORK_TYPE_SELECTED FTP_SERVER_NETWORK_TYPE
+#endif
+
 
 #if defined(ESP8266) || defined(ESP31B)
 	#ifndef STORAGE_SD_FORCE_DISABLE
@@ -107,84 +118,93 @@
 
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)
 
-#if !defined(ESP8266) && !defined(ESP31B)
-#error "network type ESP8266 only possible on the ESP mcu!"
-#endif
+	#if !defined(ESP8266) && !defined(ESP31B)
+		#error "network type ESP8266 only possible on the ESP mcu!"
+		#endif
 
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#else
-#include <ESP31BWiFi.h>
-#endif
-#define FTP_CLIENT_NETWORK_CLASS WiFiClient
-//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
-#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
-#define NET_CLASS WiFi
-#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
-#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_W5100)
+		#ifdef ESP8266
+		#include <ESP8266WiFi.h>
+		#else
+		#include <ESP31BWiFi.h>
+		#endif
+		#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+		//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
+		#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+		#define NET_CLASS WiFi
+		#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
+		#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+	#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_W5100)
 
-#ifdef STM32_DEVICE
-#define FTP_CLIENT_NETWORK_CLASS TCPClient
-#define FTP_SERVER_NETWORK_SERVER_CLASS TCPServer
-#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
-#define NET_CLASS Ethernet
-#else
-#include <Ethernet.h>
-#include <SPI.h>
-#define FTP_CLIENT_NETWORK_CLASS EthernetClient
-#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
-#define NET_CLASS Ethernet
-#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
-#endif
+		#ifdef STM32_DEVICE
+		#define FTP_CLIENT_NETWORK_CLASS TCPClient
+		#define FTP_SERVER_NETWORK_SERVER_CLASS TCPServer
+		#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+		#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+		#define NET_CLASS Ethernet
+		#else
+		#include <Ethernet.h>
+		#include <SPI.h>
+		#define FTP_CLIENT_NETWORK_CLASS EthernetClient
+		#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
+		#define NET_CLASS Ethernet
+		#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+		#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+	#endif
 
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ENC28J60)
 
-#include <UIPEthernet.h>
+	#include <UIPEthernet.h>
 
-#define FTP_CLIENT_NETWORK_CLASS UIPClient
-#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
-#define NET_CLASS Ethernet
-#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
-//#include <UIPEthernet.h>
-//UIPClient base_client;
-//SSLClient client(base_client, TAs, (size_t)TAs_NUM, A5);
-//
-//#define FTP_CLIENT_NETWORK_CLASS SSLClient
-//#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
+	#define FTP_CLIENT_NETWORK_CLASS UIPClient
+	#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
+	#define NET_CLASS Ethernet
+	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+	//#include <UIPEthernet.h>
+	//UIPClient base_client;
+	//SSLClient client(base_client, TAs, (size_t)TAs_NUM, A5);
+	//
+	//#define FTP_CLIENT_NETWORK_CLASS SSLClient
+	//#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
 
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32)
 
-#include <WiFi.h>
-//#include <WiFiClientSecure.h>
-#define FTP_CLIENT_NETWORK_CLASS WiFiClient
-//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
-#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
-#define NET_CLASS WiFi
-#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+	#include <WiFi.h>
+	//#include <WiFiClientSecure.h>
+	#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+	//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
+	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+	#define NET_CLASS WiFi
+	#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
+	#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32_ETH)
 
-#include <ETH.h>
-#define FTP_CLIENT_NETWORK_CLASS WiFiClient
-#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
-#define NET_CLASS Ethernet
-#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+	#include <ETH.h>
+	#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+	#define NET_CLASS Ethernet
+	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
 
-#include <WiFiNINA.h>
-#define FTP_CLIENT_NETWORK_CLASS WiFiClient
-//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiSSLClient
-#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
-#define NET_CLASS WiFi
-#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+	#include <WiFiNINA.h>
+	#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+	//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiSSLClient
+	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+	#define NET_CLASS WiFi
+	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_SEEED_RTL8720DN)
+
+	#include <rpcWiFi.h>
+	#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+	//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiSSLClient
+	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+	#define NET_CLASS WiFi
+	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
 #else
-#error "no network type selected!"
+	#error "no network type selected!"
 #endif
 
 #if(STORAGE_TYPE == STORAGE_SPIFFS)
@@ -210,16 +230,37 @@
 
 
 #if ESP8266
-		#define O_READ     "r"
-
-	   #define O_RDONLY     "r"
-
-	   #define O_WRITE    "w"
-	   #define O_RDWR     "w+"
-	   #define O_CREAT    "w+"
-	   #define O_APPEND   "a+"
+	#define FTP_FILE_READ "r"
+	#define FTP_FILE_READ_ONLY "r"
+	#define FTP_FILE_READ_WRITE "w+"
+	#define FTP_FILE_WRITE_APPEND "a+"
+	#define FTP_FILE_WRITE_CREATE "w+"
+//
+//
+//
+//		#define O_READ "r"
+//
+//	   #define O_RDONLY "r"
+//
+//	   #define O_WRITE "w"
+//	   #define O_RDWR "w+"
+//	   #define O_CREAT "w+"
+//	   #define O_APPEND "a+"
 #else
-	#define O_READ    "r"
+	#define FTP_FILE_READ "r"
+	#define FTP_FILE_READ_ONLY "r"
+	#define FTP_FILE_READ_WRITE "w"
+	#define FTP_FILE_WRITE_APPEND "a"
+	#define FTP_FILE_WRITE_CREATE "w"
+
+//		#define O_READ "r"
+//
+//	   #define O_RDONLY "r"
+//
+//	   #define O_WRITE "w"
+//	   #define O_RDWR "w"
+//	   #define O_CREAT "w"
+//	   #define O_APPEND "a"
 #endif
 
 		#define STORAGE_MANAGER SPIFFS
@@ -229,15 +270,46 @@
 		#define FTP_FILE File
 		#define FTP_DIR Dir
 
-		#define O_READ     "r"
+//		#define O_READ     "r"
+//
+//		#define O_RDONLY     "r"
+//
+//		#define O_WRITE    "w"
+//		#define O_RDWR     "w+"
+//		#define O_CREAT    "w+"
+//		#define O_APPEND   "a+"
+	#if ESP8266
+		#define FTP_FILE_READ "r"
+		#define FTP_FILE_READ_ONLY "r"
+		#define FTP_FILE_READ_WRITE "w+"
+		#define FTP_FILE_WRITE_APPEND "a+"
+		#define FTP_FILE_WRITE_CREATE "w+"
+	//
+	//
+	//
+	//		#define O_READ "r"
+	//
+	//	   #define O_RDONLY "r"
+	//
+	//	   #define O_WRITE "w"
+	//	   #define O_RDWR "w+"
+	//	   #define O_CREAT "w+"
+	//	   #define O_APPEND "a+"
+	#else
+		#define FTP_FILE_READ "r"
+		#define FTP_FILE_READ_WRITE "w"
+		#define FTP_FILE_WRITE_APPEND "a"
+		#define FTP_FILE_WRITE_CREATE "w"
 
-		#define O_RDONLY     "r"
-
-		#define O_WRITE    "w"
-		#define O_RDWR     "w+"
-		#define O_CREAT    "w+"
-		#define O_APPEND   "a+"
-
+	//		#define O_READ "r"
+	//
+	//	   #define O_RDONLY "r"
+	//
+	//	   #define O_WRITE "w"
+	//	   #define O_RDWR "w"
+	//	   #define O_CREAT "w"
+	//	   #define O_APPEND "a"
+	#endif
 #elif(STORAGE_TYPE == STORAGE_SD)
 		#include <SPI.h>
 		#include <SD.h>
@@ -246,39 +318,74 @@
   	  #define FTP_FILE File
   	  #define FTP_DIR File
 
+#elif(STORAGE_TYPE == STORAGE_SEEED_SD)
+	#include <Seeed_FS.h>
+	#define STORAGE_MANAGER SD
+
+	#include "SD/Seeed_SD.h"
+
+
+//	#define STORAGE_MANAGER SPIFLASH
+//	#include "SFUD/Seeed_SFUD.h"
+
+	#define FTP_FILE File
+	#define FTP_DIR File
+
+	#define FTP_FILE_READ FILE_READ
+	#define FTP_FILE_READ_ONLY FILE_READ
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_APPEND
+	#define FTP_FILE_WRITE_CREATE FILE_WRITE
+
 #elif (STORAGE_TYPE <= STORAGE_SDFAT2)
-  #include <SdFat.h>
-  #include <sdios.h>
+	#include <SdFat.h>
+	#include <sdios.h>
 
-  #define STORAGE_MANAGER sd
-  #define FTP_FILE SdFile
-  #define FTP_DIR SdFile
-  extern SdFat STORAGE_MANAGER;
+	#define STORAGE_MANAGER sd
+	#define FTP_FILE SdFile
+	#define FTP_DIR SdFile
+	extern SdFat STORAGE_MANAGER;
 
-
+	#define FTP_FILE_READ O_READ
+	#define FTP_FILE_READ_ONLY O_RDONLY
+	#define FTP_FILE_READ_WRITE O_RDWR
+	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
+	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
 #elif (STORAGE_TYPE == STORAGE_SPIFM)
-  #include <SdFat.h>
-  #include <Adafruit_SPIFlash.h>
-#include <sdios.h>
+	#include <SdFat.h>
+	#include <Adafruit_SPIFlash.h>
+	#include <sdios.h>
 
-  #define STORAGE_MANAGER fatfs
-  #define FTP_FILE File
-  #define FTP_DIR File
-  extern FatFileSystem STORAGE_MANAGER;
-  extern Adafruit_SPIFlash flash;
+	#define STORAGE_MANAGER fatfs
+	#define FTP_FILE File
+	#define FTP_DIR File
+	extern FatFileSystem STORAGE_MANAGER;
+	extern Adafruit_SPIFlash flash;
+	#define FTP_FILE_READ O_READ
+	#define FTP_FILE_READ_ONLY O_RDONLY
+	#define FTP_FILE_READ_WRITE O_RDWR
+	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
+	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
+
 #elif (STORAGE_TYPE == STORAGE_FATFS)
-  #include <FatFs.h>
-#include <sdios.h>
+	#include <FatFs.h>
+	#include <sdios.h>
 
-  #define STORAGE_MANAGER sdff
-  #define FTP_FILE FileFs
-  #define FTP_DIR DirFs
-  extern FatFsClass STORAGE_MANAGER;
-  #define O_READ     FA_READ
-  #define O_WRITE    FA_WRITE
-  #define O_RDWR     FA_READ | FA_WRITE
-  #define O_CREAT    FA_CREATE_ALWAYS
-  #define O_APPEND   FA_OPEN_APPEND
+	#define STORAGE_MANAGER sdff
+	#define FTP_FILE FileFs
+	#define FTP_DIR DirFs
+	extern FatFsClass STORAGE_MANAGER;
+	#define O_READ     FA_READ
+	#define O_WRITE    FA_WRITE
+	#define O_RDWR     FA_READ | FA_WRITE
+	#define O_CREAT    FA_CREATE_ALWAYS
+	#define O_APPEND   FA_OPEN_APPEND
+
+	#define FTP_FILE_READ O_READ
+	#define FTP_FILE_READ_ONLY O_RDONLY
+	#define FTP_FILE_READ_WRITE O_RDWR
+	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
+	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
 #endif
 
 
@@ -419,28 +526,38 @@ private:
   int8_t  readChar();
 
   bool     exists( const char * path ) {
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
+#if STORAGE_TYPE == STORAGE_SPIFFS || (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)
 	  if (strcmp(path, "/") == 0) return true;
 #endif
    	  return STORAGE_MANAGER.exists( path );
   };
   bool     remove( const char * path ) { return STORAGE_MANAGER.remove( path ); };
+#if STORAGE_TYPE == STORAGE_SPIFFS
+  bool     makeDir( const char * path ) { return false; };
+  bool     removeDir( const char * path ) { return false; };
+#else
   bool     makeDir( const char * path ) { return STORAGE_MANAGER.mkdir( path ); };
   bool     removeDir( const char * path ) { return STORAGE_MANAGER.rmdir( path ); };
+#endif
 
 #if STORAGE_TYPE == STORAGE_SD
   bool     rename( const char * path, const char * newpath );
-#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SD)
-  bool     rename( const char * path, const char * newpath )
-             { return STORAGE_MANAGER.rename( path, newpath ); };
-  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #else
-  bool     rename( const char * path, const char * newpath )
-  	  	  	  { return STORAGE_MANAGER.rename( path, newpath ); };
-  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
+  bool     rename( const char * path, const char * newpath ) { return STORAGE_MANAGER.rename( path, newpath ); };
 #endif
-  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
+#if (STORAGE_TYPE == STORAGE_SEEED_SD)
+  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
+#elif (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
+  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
+#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS )
   bool openFile( const char * path, const char * readType );
+//  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
+#else
+  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
+//  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
+#endif
+//  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
+//  bool openFile( const char * path, const char * readType );
   uint16_t fileSize( FTP_FILE file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
@@ -470,7 +587,14 @@ private:
 #elif STORAGE_TYPE == STORAGE_SD
   uint32_t capacity() { return true; };
   uint32_t free() { return true; };
-
+#elif STORAGE_TYPE == STORAGE_SEEED_SD
+  uint32_t capacity() {
+	  return STORAGE_MANAGER.totalBytes() >> 1;
+  };
+  uint32_t free() {
+	  return (STORAGE_MANAGER.totalBytes() -
+			  STORAGE_MANAGER.usedBytes()) >> 1;
+  };
 #elif STORAGE_TYPE == STORAGE_SDFAT1
   uint32_t capacity() { return STORAGE_MANAGER.card()->cardSize() >> 1; };
   uint32_t free() { return STORAGE_MANAGER.vol()->freeClusterCount() *
