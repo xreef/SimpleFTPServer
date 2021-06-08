@@ -2,54 +2,59 @@
  *  This sketch sends data via HTTP GET requests to examle.com service.
  */
 
-#include <rpcWiFi.h>
 //#ifdef USESPIFLASH    // if you want to use flash FS . default mode is spi mode
 //#define DEV SPIFLASH
 //#include "SFUD/Seeed_SFUD.h"
 //#else                 // if you want to use SD FS
-#include <Seeed_FS.h>
-#include "SD/Seeed_SD.h"
+//#include <Seeed_FS.h>
+//#include "SD/Seeed_SD.h"
 //#endif
+#include "SdFat.h"
+
+#include <rpcWiFi.h>
+
 #include <FtpServer.h>
 
 
+#define SD_CONFIG SdSpiConfig(SDCARD_SS_PIN, 2)
+SdFs sd;
 
 FtpServer ftpSrv;
 
 const char *ssid = "<YOUR-SSID>";
 const char *password = "<YOUR-PASSWD>";
 
-void listDir(fs::FS& fs, const char* dirname, uint8_t levels) {
-    Serial.print("Listing directory: ");
-    Serial.println(dirname);
-
-    File root = fs.open(dirname);
-    if (!root) {
-        Serial.println("Failed to open directory");
-        return;
-    }
-    if (!root.isDirectory()) {
-        Serial.println("Not a directory");
-        return;
-    }
-
-    File file = root.openNextFile();
-    while (file) {
-        if (file.isDirectory()) {
-            Serial.print("  DIR : ");
-            Serial.println(file.name());
-            if (levels) {
-                listDir(fs, file.name(), levels - 1);
-            }
-        } else {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("  SIZE: ");
-            Serial.println(file.size());
-        }
-        file = root.openNextFile();
-    }
-}
+//void listDir(const char* dirname, uint8_t levels) {
+//    Serial.print("Listing directory: ");
+//    Serial.println(dirname);
+//
+//    File root = SD.open(dirname);
+//    if (!root) {
+//        Serial.println("Failed to open directory");
+//        return;
+//    }
+//    if (!root.isDirectory()) {
+//        Serial.println("Not a directory");
+//        return;
+//    }
+//
+//    File file = root.openNextFile();
+//    while (file) {
+//        if (file.isDirectory()) {
+//            Serial.print("  DIR : ");
+//            Serial.println(file.name());
+//            if (levels) {
+//                listDir(file.name(), levels - 1);
+//            }
+//        } else {
+//            Serial.print("  FILE: ");
+//            Serial.print(file.name());
+//            Serial.print("  SIZE: ");
+//            Serial.println(file.size());
+//        }
+//        file = root.openNextFile();
+//    }
+//}
 
 
 void setup()
@@ -60,10 +65,23 @@ void setup()
     pinMode(5, OUTPUT);
     digitalWrite(5, HIGH);
 
-    while (!SD.begin(SDCARD_SS_PIN,SDCARD_SPI,4000000UL)) {
-//    while (!DEV.begin(104000000UL)) {
-        Serial.println("Card Mount Failed");
-        return;
+//    while (!SD.begin(SDCARD_SS_PIN,SDCARD_SPI,4000000UL)) {
+////    while (!DEV.begin(104000000UL)) {
+//        Serial.println("Card Mount Failed");
+//        return;
+//    }
+
+
+    // Initialize the SD.
+    if (!sd.begin(SD_CONFIG)) {
+      sd.initErrorHalt(&Serial);
+    }
+    FsFile dir;
+    FsFile file;
+
+    // Open root directory
+    if (!dir.open("/")){
+      Serial.println("dir.open failed");
     }
 
     // We start by connecting to a WiFi network
@@ -99,36 +117,60 @@ void setup()
 
     Serial.println("finish!");
 
-    Serial.print("Listing directory: ");
-    Serial.println("/");
-
-    File root = SD.open("/");
-    if (!root) {
-        Serial.println("Failed to open directory");
-        return;
-    }
-    if (!root.isDirectory()) {
-        Serial.println("Not a directory");
-        return;
-    }
-
-    File file = root.openNextFile();
-    while (file) {
-        if (file.isDirectory()) {
-            Serial.print("  DIR : ");
-            Serial.println(file.name());
-        } else {
-            Serial.print("  FILE: ");
-            Serial.print(file.name());
-            Serial.print("  SIZE: ");
-            Serial.println(file.size());
-        }
-        file = root.openNextFile();
-    }
+//    Serial.print("Listing directory: ");
+//    Serial.println("/");
+//
+//    File root = SD.open("/");
+//    if (!root) {
+//        Serial.println("Failed to open directory");
+//        return;
+//    }
+//    if (!root.isDirectory()) {
+//        Serial.println("Not a directory");
+//        return;
+//    }
+//
+//    File file = root.openNextFile();
+//    while (file) {
+//        if (file.isDirectory()) {
+//            Serial.print("  DIR : ");
+//            Serial.println(file.name());
+//        } else {
+//            Serial.print("  FILE: ");
+//            Serial.print(file.name());
+//            Serial.print("  SIZE: ");
+//            Serial.println(file.size());
+//        }
+//        file = root.openNextFile();
+//    }
 //    file.close();
 //    root.close();
 
+//    listDir("/", 0);
+
+    while (file.openNext(&dir, O_RDONLY)) {
+      file.printFileSize(&Serial);
+      Serial.write(' ');
+      file.printModifyDateTime(&Serial);
+      Serial.write(' ');
+      file.printName(&Serial);
+      if (file.isDir()) {
+        // Indicate a directory.
+        Serial.write('/');
+      }
+      Serial.println();
+      file.close();
+    }
+    if (dir.getError()) {
+      Serial.println("openNext failed");
+    } else {
+      Serial.println("Done!");
+    }
+
+
     ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.
+
+//    listDir("/", 0);
 
   }
 

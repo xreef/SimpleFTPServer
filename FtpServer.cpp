@@ -1037,6 +1037,9 @@ bool FtpServer::doStore()
   int16_t na = data.available();
   if( na == 0 ) {
 	  DEBUG_PRINTLN("NO DATA AVAILABLE!");
+#if FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
+	  data.stop();
+#endif
     if( data.connected()) {
       return true;
     } else
@@ -1862,6 +1865,29 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
   			return true;
   		}
   }
+#elif STORAGE_TYPE <= STORAGE_SDFAT2
+  bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
+		DEBUG_PRINT(F("File to open ") );
+		DEBUG_PRINT( path );
+		DEBUG_PRINT(F(" readType ") );
+		DEBUG_PRINTLN(readTypeInt);
+
+//		if (readTypeInt == 0X01) {
+//			readTypeInt = FILE_READ;
+//		}else {
+//			readTypeInt = FILE_WRITE;
+//		}
+
+		file = STORAGE_MANAGER.open( path, readTypeInt );
+		if (!file) { // && readTypeInt[0]==FILE_READ) {
+			return false;
+		}else{
+			DEBUG_PRINTLN("TRUE");
+
+			return true;
+		}
+}
+
 #else
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], const char * readType ) {
   	return openFile( (const char*) path, readType );
