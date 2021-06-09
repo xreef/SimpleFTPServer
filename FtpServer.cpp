@@ -258,6 +258,10 @@ bool FtpServer::processCommand()
   //                                   //
   ///////////////////////////////////////
 
+  // RoSchmi added the next two lines
+  DEBUG_PRINT("Command is: ");
+  DEBUG_PRINTLN(command);
+
   //
   //  USER - User Identity 
   //
@@ -1029,8 +1033,10 @@ bool FtpServer::doRetrieve()
 		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file), bytesTransfered);
 	  }
 
-
+// RoSchmi
+#if STORAGE_TYPE != STORAGE_SEEED_SD
     return true;
+#endif
   }
   closeTransfer();
   return false;
@@ -1441,7 +1447,10 @@ bool FtpServer::doMlsd()
 		DEBUG_PRINT( F("; ") ); DEBUG_PRINTLN( fn );
 
 		nbMatch ++;
-//		fileDir.close();
+// RoSchmi: next line was commented
+#if STORAGE_TYPE == STORAGE_SEEED_SD
+		fileDir.close();
+#endif
 		return true;
 	  }
 
@@ -1710,7 +1719,9 @@ bool FtpServer::makeExistsPath( char * path, char * param )
 {
   if( ! makePath( path, param ))
     return false;
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
+  // RoSchmi
+  //#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
+#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD  || STORAGE_TYPE == STORAGE_SEEED_SD)
   if (strcmp(path, "/") == 0)  return true;
 #endif
   DEBUG_PRINT("PATH --> ")
