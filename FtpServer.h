@@ -319,11 +319,10 @@
   	  #define FTP_DIR File
 
 #elif(STORAGE_TYPE == STORAGE_SEEED_SD)
-//	#include <Seeed_FS.h>
+	#include <Seeed_FS.h>
+	#define STORAGE_MANAGER SD
 
 	#include "SD/Seeed_SD.h"
-
-	#define STORAGE_MANAGER SDExtern
 
 
 //	#define STORAGE_MANAGER SPIFLASH
@@ -338,27 +337,13 @@
 	#define FTP_FILE_WRITE_APPEND FILE_APPEND
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
-#elif (STORAGE_TYPE == STORAGE_SDFAT1)
+#elif (STORAGE_TYPE <= STORAGE_SDFAT2)
 	#include <SdFat.h>
 	#include <sdios.h>
 
 	#define STORAGE_MANAGER sd
 	#define FTP_FILE SdFile
 	#define FTP_DIR SdFile
-	extern SdFat STORAGE_MANAGER;
-
-	#define FTP_FILE_READ O_READ
-	#define FTP_FILE_READ_ONLY O_RDONLY
-	#define FTP_FILE_READ_WRITE O_RDWR
-	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
-	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
-#elif (STORAGE_TYPE == STORAGE_SDFAT2)
-	#include <SdFat.h>
-	#include <sdios.h>
-
-	#define STORAGE_MANAGER sd
-	#define FTP_FILE FsFile
-	#define FTP_DIR FsFile
 	extern SdFat STORAGE_MANAGER;
 
 	#define FTP_FILE_READ O_READ
@@ -567,8 +552,6 @@ private:
 #elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS )
   bool openFile( const char * path, const char * readType );
 //  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
-#elif STORAGE_TYPE <= STORAGE_SDFAT2
-  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #else
   bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
 //  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
@@ -678,3 +661,6 @@ private:
 };
 
 #endif // FTP_SERVER_H
+
+
+

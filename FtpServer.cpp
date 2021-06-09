@@ -1,3 +1,4 @@
+
 /*
  * FtpServer Arduino, esp8266 and esp32 library for Ftp Server
  * Derived form Jean-Michel Gallego version
@@ -249,6 +250,11 @@ bool FtpServer::processCommand()
   //
   //  USER - User Identity 
   //
+
+  // RoSchmi added the next two lines
+  DEBUG_PRINT("Command is: ");
+  DEBUG_PRINTLN(command);
+
   if( CommandIs( "USER" ))
   {
     if( ! strcmp( parameter, user ))
@@ -520,7 +526,7 @@ bool FtpServer::processCommand()
       {
     	DEBUG_PRINT("Dir opened!!");
 
-        nbMatch = 0;
+        nbMatch = 0;        
         if( CommandIs( "LIST" ))
           transferStage = FTP_List;
         else if( CommandIs( "NLST" ))
@@ -1019,6 +1025,11 @@ bool FtpServer::doRetrieve()
     file.close();
     return false;
   }
+  
+  File fileDir = SD.open(file.name());
+
+  file = fileDir;
+
   int16_t nb = file.read( buf, FTP_BUF_SIZE );
   if( nb > 0 )
   {
@@ -1026,7 +1037,8 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINT(F("NB --> "));
     DEBUG_PRINTLN(nb);
     bytesTransfered += nb;
-    return true;
+    // RoSchmi
+    //return true;
   }
   closeTransfer();
   return false;
@@ -1037,9 +1049,6 @@ bool FtpServer::doStore()
   int16_t na = data.available();
   if( na == 0 ) {
 	  DEBUG_PRINTLN("NO DATA AVAILABLE!");
-#if FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
-	  data.stop();
-#endif
     if( data.connected()) {
       return true;
     } else
@@ -1108,7 +1117,10 @@ bool FtpServer::doList()
 	#if ESP8266
 	  if( dir.next())
 	#else
-	  File fileDir = dir.openNextFile();
+    //RoSchmi
+    
+    File fileDir = SD.open(dir.name());
+	  fileDir = dir.openNextFile();
 	  if( fileDir )
 	#endif
 	  {
@@ -1359,9 +1371,14 @@ bool FtpServer::doMlsd()
 	  if( dir.next())
 	#else
 
-	  File fileDir = dir.openNextFile();
+    //RoSchmi
+    File fileDir = SD.open(dir.name());
+
+    fileDir = dir.openNextFile();
+	  
 	  DEBUG_PRINTLN(dir);
 	  DEBUG_PRINTLN(fileDir);
+
 	  if( fileDir )
 	#endif
 	  {
@@ -1413,7 +1430,8 @@ bool FtpServer::doMlsd()
 		DEBUG_PRINT( F("; ") ); DEBUG_PRINTLN( fn );
 
 		nbMatch ++;
-//		fileDir.close();
+    // RoSchmi: next line was commented
+    fileDir.close();
 		return true;
 	  }
 
@@ -1673,7 +1691,10 @@ bool FtpServer::makeExistsPath( char * path, char * param )
 {
   if( ! makePath( path, param ))
     return false;
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
+
+// RoSchmi
+//#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
+#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD  || STORAGE_TYPE == STORAGE_SEEED_SD)
   if (strcmp(path, "/") == 0)  return true;
 #endif
   DEBUG_PRINT("PATH --> ")
@@ -1865,29 +1886,6 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
   			return true;
   		}
   }
-#elif STORAGE_TYPE <= STORAGE_SDFAT2
-  bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
-		DEBUG_PRINT(F("File to open ") );
-		DEBUG_PRINT( path );
-		DEBUG_PRINT(F(" readType ") );
-		DEBUG_PRINTLN(readTypeInt);
-
-//		if (readTypeInt == 0X01) {
-//			readTypeInt = FILE_READ;
-//		}else {
-//			readTypeInt = FILE_WRITE;
-//		}
-
-		file = STORAGE_MANAGER.open( path, readTypeInt );
-		if (!file) { // && readTypeInt[0]==FILE_READ) {
-			return false;
-		}else{
-			DEBUG_PRINTLN("TRUE");
-
-			return true;
-		}
-}
-
 #else
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], const char * readType ) {
   	return openFile( (const char*) path, readType );
@@ -2129,3 +2127,5 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 		return remove( path );
   };
 #endif
+
+
