@@ -173,6 +173,10 @@ uint8_t FtpServer::handleFTP() {
 		} else if (transferStage == FTP_Store) // Store data
 				{
 			if (!doStore()) {
+		    	  if (FtpServer::_callback) {
+		    		  FtpServer::_callback(FTP_FREE_SPACE_CHANGE, free(), capacity());
+		    	  }
+
 				transferStage = FTP_Close;
 			}
 		} else if (transferStage == FTP_List || transferStage == FTP_Nlst) // LIST or NLST
@@ -222,6 +226,10 @@ void FtpServer::clientConnected()
   client.println(F("220---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
   iCL = 0;
+  if (FtpServer::_callback) {
+	  FtpServer::_callback(FTP_CONNECT, free(), capacity());
+  }
+
 }
 
 void FtpServer::disconnectClient()
@@ -230,8 +238,12 @@ void FtpServer::disconnectClient()
 
   abortTransfer();
   client.println(F("221 Goodbye") );
+
+  if (FtpServer::_callback) {
+	  FtpServer::_callback(FTP_DISCONNECT, free(), capacity());
+  }
+
   if( client ) {
-    client.stop();
   }
   if( data ) {
     data.stop();
@@ -500,6 +512,10 @@ bool FtpServer::processCommand()
     char path[ FTP_CWD_SIZE ];
     if( haveParameter() && makeExistsPath( path )) {
       if( remove( path )) {
+    	  if (FtpServer::_callback) {
+    		  FtpServer::_callback(FTP_FREE_SPACE_CHANGE, free(), capacity());
+    	  }
+
         client.print( F("250 Deleted ") ); client.println( parameter );
       } else {
     	  client.print( F("450 Can't delete ") ); client.println( parameter );
@@ -584,6 +600,11 @@ bool FtpServer::processCommand()
       {
     	  DEBUG_PRINT( F(" Sending ") ); DEBUG_PRINT( parameter ); DEBUG_PRINT( F(" size ") ); DEBUG_PRINTLN( long( fileSize( file ))  );
 
+		  if (FtpServer::_transferCallback) {
+			  FtpServer::_transferCallback(FTP_DOWNLOAD_START, parameter,  long( fileSize( file )));
+		  }
+
+
         client.print( F("150-Connected to port ") ); client.println( dataPort );
         client.print( F("150 ") ); client.print( long( fileSize( file )) ); client.println( F(" bytes to download") );
         millisBeginTrans = millis();
@@ -628,6 +649,12 @@ bool FtpServer::processCommand()
         millisBeginTrans = millis();
         bytesTransfered = 0;
         transferStage = FTP_Store;
+
+		  if (FtpServer::_transferCallback) {
+
+			  FtpServer::_transferCallback(FTP_UPLOAD_START, parameter, bytesTransfered);
+		  }
+
       }
     }
   }
@@ -668,7 +695,7 @@ bool FtpServer::processCommand()
       {
     	  DEBUG_PRINT( F(" Deleting ") ); DEBUG_PRINTLN( path );
 
-        client.print( F("250 \"") ); client.print( parameter ); client.println( F("\" deleted") );
+    	  client.print( F("250 \"") ); client.print( parameter ); client.println( F("\" deleted") );
       }
       else {
     	  client.print( F("550 Can't remove \"") ); client.print( parameter ); client.println( F("\". Directory not empty?") );
@@ -906,41 +933,22 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
 #elif STORAGE_TYPE == STORAGE_SEEED_SD
-//	    if (!STORAGE_MANAGER.begin(SDCARD_SS_PIN,SDCARD_SPI,4000000UL)) {
-//	//    while (!DEV.begin(104000000UL)) {
-//	    	DEBUG_PRINTLN("Card Mount Failed");
-//	    }
-
 	  if( cwdName == 0 ) {
 	  	  DEBUG_PRINT("cwdName forced -> ");
 	  	  DEBUG_PRINTLN(cwdName );
 
-//		  DEBUG_PRINTLN(STORAGE_MANAGER.exists("/"));
 	  	  File d = STORAGE_MANAGER.open( "/" );
-//	  	  pdir = &d;
-//		    if (!d.isDirectory()) {
-//		        DEBUG_PRINTLN("d / Not a directory");
-//		    }
-//	  	  dir = STORAGE_MANAGER.open( "/" );
-		    dir=d;
+		  dir=d;
 	  } else {
 		  DEBUG_PRINT("cwdName -> ");
 		  DEBUG_PRINTLN(cwdName );
-//		  DEBUG_PRINTLN(STORAGE_MANAGER.exists(cwdName));
-//		  dir = STORAGE_MANAGER.open( cwdName );
 
 		  File d = STORAGE_MANAGER.open( cwdName );
-//		  pdir = &d;
-//		    if (!d.isDirectory()) {
-//		        DEBUG_PRINTLN("d Not a directory");
-//		    }
-		    dir=d;
+		  dir=d;
 	  }
 
-//	  pdir = &dir;
 	  openD = dir.isDirectory();
 
-//	  openD = dir.isDirectory();
 //#ifdef FTP_ADDITIONAL_DEBUG
 //	    DEBUG_PRINT("Listing directory: ");
 //	    DEBUG_PRINTLN(cwdName);
@@ -970,8 +978,6 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 //
 //#endif
 
-//	  dir.rewindDirectory();
-
 	  if( ! openD  ) {
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
@@ -986,14 +992,6 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 	  openD = true;
 
     } else {
-//  	  openD = STORAGE_MANAGER.exists( cwdName );
-//	  DEBUG_PRINT("DIRECTORY ");
-//	  DEBUG_PRINT(cwdName);
-//	  DEBUG_PRINTLN(openD);
-//
-//  	  if (openD){
-//        dir = STORAGE_MANAGER.openDir( cwdName );
-//  	  }
     	openD = false;
     }
     if( ! openD ) {
@@ -1026,6 +1024,12 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINT(F("NB --> "));
     DEBUG_PRINTLN(nb);
     bytesTransfered += nb;
+
+	  if (FtpServer::_transferCallback) {
+		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file), bytesTransfered);
+	  }
+
+
     return true;
   }
   closeTransfer();
@@ -1048,6 +1052,7 @@ bool FtpServer::doStore()
       return false;
     }
   }
+
   if( na > FTP_BUF_SIZE ) {
     na = FTP_BUF_SIZE;
   }
@@ -1058,11 +1063,15 @@ bool FtpServer::doStore()
 	    DEBUG_PRINT("NB -> ");
 	    DEBUG_PRINTLN(nb);
 
-    // FtpDebug << millis() << " " << nb << endl;
     rc = file.write( buf, nb );
     DEBUG_PRINT("RC -> ");
     DEBUG_PRINTLN(rc);
     bytesTransfered += nb;
+
+	  if (FtpServer::_transferCallback) {
+
+		  FtpServer::_transferCallback(FTP_UPLOAD, getFileName(&file), bytesTransfered);
+	  }
   }
   if( nb < 0 || rc == nb  ) {
     return true;
@@ -1108,7 +1117,12 @@ bool FtpServer::doList()
 	#if ESP8266
 	  if( dir.next())
 	#else
+#if STORAGE_TYPE == STORAGE_SEEED_SD
+	  File fileDir = STORAGE_MANAGER.open(dir.name());
+	  fileDir = dir.openNextFile();
+#else
 	  File fileDir = dir.openNextFile();
+#endif
 	  if( fileDir )
 	#endif
 	  {
@@ -1121,6 +1135,11 @@ bool FtpServer::doList()
 		data.print( long( dir.fileSize()) );
 		data.print( F(",\t") );
 		data.println( dir.fileName() );
+	#elif STORAGE_TYPE == STORAGE_SEEED_SD
+		String fn = fileDir.name();
+		fn.remove(0, strlen(dir.name()));
+		if (fn[0]=='/') { fn.remove(0, 1); }
+		long fz = fileDir.size();
 	#else
 		data.print( long( fileDir.size()) );
 		data.print( F(",\t") );
@@ -1358,8 +1377,12 @@ bool FtpServer::doMlsd()
 	#if ESP8266
 	  if( dir.next())
 	#else
-
+#if STORAGE_TYPE == STORAGE_SEEED_SD
+	  File fileDir = STORAGE_MANAGER.open(dir.name());
+	  fileDir = dir.openNextFile();
+#else
 	  File fileDir = dir.openNextFile();
+#endif
 	  DEBUG_PRINTLN(dir);
 	  DEBUG_PRINTLN(fileDir);
 	  if( fileDir )
@@ -1392,6 +1415,11 @@ bool FtpServer::doMlsd()
 	#if ESP8266
 		String fn = dir.fileName();
 		long fz = dir.fileSize();
+	#elif STORAGE_TYPE == STORAGE_SEEED_SD
+		String fn = fileDir.name();
+		fn.remove(0, strlen(dir.name()));
+		if (fn[0]=='/') { fn.remove(0, 1); }
+		long fz = fileDir.size();
 	#else
 		String fn = fileDir.name();
 		fn.remove(0, 1);
@@ -1509,6 +1537,11 @@ void FtpServer::closeTransfer()
 	  DEBUG_PRINT( F(" Transfer completed in ") ); DEBUG_PRINT( deltaT ); DEBUG_PRINTLN( F(" ms, ") );
 	  DEBUG_PRINT( bytesTransfered / deltaT ); DEBUG_PRINTLN( F(" kbytes/s") );
 
+	  if (FtpServer::_transferCallback) {
+		  FtpServer::_transferCallback(FTP_TRANSFER_STOP, getFileName(&file), bytesTransfered);
+	  }
+
+
     client.println(F("226-File successfully transferred") );
     client.print( F("226 ") ); client.print( deltaT ); client.print( F(" ms, ") );
     client.print( bytesTransfered / deltaT ); client.println( F(" kbytes/s") );
@@ -1524,7 +1557,11 @@ void FtpServer::abortTransfer()
 {
   if( transferStage != FTP_Close )
   {
-    file.close();
+	  if (FtpServer::_transferCallback) {
+		  FtpServer::_transferCallback(FTP_TRANSFER_ERROR, getFileName(&file), bytesTransfered);
+	  }
+
+	  file.close();
 #if STORAGE_TYPE != STORAGE_SPIFFS && STORAGE_TYPE != STORAGE_LITTLEFS && STORAGE_TYPE != STORAGE_SEEED_SD
     dir.close();
 #endif
@@ -1770,42 +1807,6 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
 #endif
 }
 
-//#if ESP32 && (STORAGE_TYPE == STORAGE_SPIFFS )
-//bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ) {
-//	String readType;
-//	if (readTypeInt == 0) {
-//		readType = "r";
-//	}else if (readTypeInt == 1) {
-//		readType = "w";
-//	}else if (readTypeInt == 2) {
-//		readType = "w";
-//	}else if (readTypeInt == 0x0008) {
-//		readType = "a";
-//	}else if (readTypeInt == 0x0200) {
-//		readType = "w";
-//	}else{
-//		readType = "w";
-//	}
-//	DEBUG_PRINT("READ TYPE --> ");
-//	DEBUG_PRINTLN(readType);
-//	return openFile( (const char*) path, readType.c_str() );
-//}
-//#endif
-//#if (STORAGE_TYPE == STORAGE_SD)
-//bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ) {
-//	String readType;
-//	if (readTypeInt == 0X01) {
-//		readType = FILE_READ;
-//	}else {
-//		readType = FILE_WRITE;
-//	}
-//	DEBUG_PRINT("READ TYPE --> ");
-//	DEBUG_PRINTLN(readType);
-//	return openFile( (const char*) path, readType.c_str() );
-//}
-//
-//#endif
-
 #if (STORAGE_TYPE == STORAGE_SEEED_SD)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
@@ -1872,14 +1873,8 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
 		DEBUG_PRINT(F(" readType ") );
 		DEBUG_PRINTLN(readTypeInt);
 
-//		if (readTypeInt == 0X01) {
-//			readTypeInt = FILE_READ;
-//		}else {
-//			readTypeInt = FILE_WRITE;
-//		}
-
 		file = STORAGE_MANAGER.open( path, readTypeInt );
-		if (!file) { // && readTypeInt[0]==FILE_READ) {
+		if (!file) {
 			return false;
 		}else{
 			DEBUG_PRINTLN("TRUE");

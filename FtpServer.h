@@ -27,7 +27,6 @@
 #include "WProgram.h"
 #endif
 
-
 //
 //#if(NETWORK_ESP8266_SD == DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266)
 //	#define ESP8266_GT_2_4_2_SD_STORAGE_SELECTED
@@ -110,11 +109,6 @@
 #else
 #error "network type ESP8266 ASYNC only possible on the ESP mcu!"
 #endif
-//
-//#include <ESPAsyncTCP.h>
-//#include <ESPAsyncTCPbuffer.h>
-//#define FTP_CLIENT_NETWORK_CLASS AsyncTCPbuffer
-//#define FTP_SERVER_NETWORK_SERVER_CLASS AsyncServer
 
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)
 
@@ -160,13 +154,7 @@
 	#define NET_CLASS Ethernet
 	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
-	//#include <UIPEthernet.h>
-	//UIPClient base_client;
 	//SSLClient client(base_client, TAs, (size_t)TAs_NUM, A5);
-	//
-	//#define FTP_CLIENT_NETWORK_CLASS SSLClient
-	//#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
-
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32)
 
 	#include <WiFi.h>
@@ -235,32 +223,12 @@
 	#define FTP_FILE_READ_WRITE "w+"
 	#define FTP_FILE_WRITE_APPEND "a+"
 	#define FTP_FILE_WRITE_CREATE "w+"
-//
-//
-//
-//		#define O_READ "r"
-//
-//	   #define O_RDONLY "r"
-//
-//	   #define O_WRITE "w"
-//	   #define O_RDWR "w+"
-//	   #define O_CREAT "w+"
-//	   #define O_APPEND "a+"
 #else
 	#define FTP_FILE_READ "r"
 	#define FTP_FILE_READ_ONLY "r"
 	#define FTP_FILE_READ_WRITE "w"
 	#define FTP_FILE_WRITE_APPEND "a"
 	#define FTP_FILE_WRITE_CREATE "w"
-
-//		#define O_READ "r"
-//
-//	   #define O_RDONLY "r"
-//
-//	   #define O_WRITE "w"
-//	   #define O_RDWR "w"
-//	   #define O_CREAT "w"
-//	   #define O_APPEND "a"
 #endif
 
 		#define STORAGE_MANAGER SPIFFS
@@ -269,46 +237,17 @@
 		#define STORAGE_MANAGER LittleFS
 		#define FTP_FILE File
 		#define FTP_DIR Dir
-
-//		#define O_READ     "r"
-//
-//		#define O_RDONLY     "r"
-//
-//		#define O_WRITE    "w"
-//		#define O_RDWR     "w+"
-//		#define O_CREAT    "w+"
-//		#define O_APPEND   "a+"
 	#if ESP8266
 		#define FTP_FILE_READ "r"
 		#define FTP_FILE_READ_ONLY "r"
 		#define FTP_FILE_READ_WRITE "w+"
 		#define FTP_FILE_WRITE_APPEND "a+"
 		#define FTP_FILE_WRITE_CREATE "w+"
-	//
-	//
-	//
-	//		#define O_READ "r"
-	//
-	//	   #define O_RDONLY "r"
-	//
-	//	   #define O_WRITE "w"
-	//	   #define O_RDWR "w+"
-	//	   #define O_CREAT "w+"
-	//	   #define O_APPEND "a+"
 	#else
 		#define FTP_FILE_READ "r"
 		#define FTP_FILE_READ_WRITE "w"
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
-
-	//		#define O_READ "r"
-	//
-	//	   #define O_RDONLY "r"
-	//
-	//	   #define O_WRITE "w"
-	//	   #define O_RDWR "w"
-	//	   #define O_CREAT "w"
-	//	   #define O_APPEND "a"
 	#endif
 #elif(STORAGE_TYPE == STORAGE_SD)
 		#include <SPI.h>
@@ -319,11 +258,11 @@
   	  #define FTP_DIR File
 
 #elif(STORAGE_TYPE == STORAGE_SEEED_SD)
-//	#include <Seeed_FS.h>
+	#include <Seeed_FS.h>
+	#define STORAGE_MANAGER SD
 
 	#include "SD/Seeed_SD.h"
 
-	#define STORAGE_MANAGER SDExtern
 
 
 //	#define STORAGE_MANAGER SPIFLASH
@@ -402,7 +341,6 @@
 	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
 	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
 #endif
-
 
 //#ifdef FTP_CLIENT_NETWORK_SSL_CLASS
 //#define FTP_CLIENT_NETWORK_CLASS FTP_CLIENT_NETWORK_SSL_CLASS
@@ -494,6 +432,28 @@ enum ftpDataConn { FTP_NoConn = 0,// No data connexion
                    FTP_Pasive,    // Pasive type
                    FTP_Active };  // Active type
 
+enum FtpOperation {
+	  FTP_CONNECT,
+	  FTP_DISCONNECT,
+	  FTP_FREE_SPACE_CHANGE
+};
+
+enum FtpTransferOperation {
+	  FTP_UPLOAD_START = 0,
+	  FTP_UPLOAD = 1,
+
+	  FTP_DOWNLOAD_START = 2,
+	  FTP_DOWNLOAD = 3,
+
+
+	  FTP_TRANSFER_STOP = 4,
+	  FTP_DOWNLOAD_STOP = 4,
+	  FTP_UPLOAD_STOP = 4,
+
+	  FTP_TRANSFER_ERROR = 5,
+	  FTP_DOWNLOAD_ERROR = 5,
+	  FTP_UPLOAD_ERROR = 5
+};
 /*
 class FtpFile : public SdFile
 {
@@ -511,7 +471,20 @@ public:
   void    credentials( const char * _user, const char * _pass );
   uint8_t handleFTP();
 
+	void setCallback(void (*_callbackParam)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) )
+	{
+		_callback = _callbackParam;
+	}
+
+	void setTransferCallback(void (*_transferCallbackParam)(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize) )
+	{
+		_transferCallback = _transferCallbackParam;
+	}
+
 private:
+  void (*_callback)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){};
+  void (*_transferCallback)(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){};
+
   void    iniVariables();
   void    clientConnected();
   void    disconnectClient();
@@ -540,6 +513,19 @@ private:
 #endif
   int8_t  readChar();
 
+  const char* getFileName(FTP_FILE *file){
+	#if STORAGE_TYPE <= STORAGE_SDFAT2
+	  int max_characters = 25;
+	  char f_name[max_characters];
+	  file->getName(f_name, max_characters);
+	  String filename = String(f_name);
+	    return filename.c_str();
+	#elif STORAGE_TYPE == STORAGE_FATFS
+	  return file->fileName();
+	#else
+	  return file->name();
+	#endif
+  }
   bool     exists( const char * path ) {
 #if STORAGE_TYPE == STORAGE_SPIFFS || (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)
 	  if (strcmp(path, "/") == 0) return true;
