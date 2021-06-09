@@ -941,13 +941,13 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 	  	  DEBUG_PRINT("cwdName forced -> ");
 	  	  DEBUG_PRINTLN(cwdName );
 
-	  	  File d = STORAGE_MANAGER.open( "/" );
+	  	  FTP_DIR d = STORAGE_MANAGER.open( "/" );
 		  dir=d;
 	  } else {
 		  DEBUG_PRINT("cwdName -> ");
 		  DEBUG_PRINTLN(cwdName );
 
-		  File d = STORAGE_MANAGER.open( cwdName );
+		  FTP_DIR d = STORAGE_MANAGER.open( cwdName );
 		  dir=d;
 	  }
 
@@ -1101,7 +1101,7 @@ bool FtpServer::doList()
 	#if ESP8266
 	  if( dir.next())
 	#else
-	  File fileDir = dir.openNextFile();
+	  FTP_FILE fileDir = dir.openNextFile();
 	  if( fileDir )
 	#endif
 	  {
@@ -1124,10 +1124,10 @@ bool FtpServer::doList()
 	  if( dir.next())
 	#else
 #if STORAGE_TYPE == STORAGE_SEEED_SD
-	  File fileDir = STORAGE_MANAGER.open(dir.name());
+	  FTP_FILE fileDir = STORAGE_MANAGER.open(dir.name());
 	  fileDir = dir.openNextFile();
 #else
-	  File fileDir = dir.openNextFile();
+	  FTP_FILE fileDir = dir.openNextFile();
 #endif
 	  if( fileDir )
 	#endif
@@ -1157,7 +1157,7 @@ bool FtpServer::doList()
     return true;
   }
 #elif STORAGE_TYPE == STORAGE_SD
-	  File fileDir = dir.openNextFile();
+	  FTP_FILE fileDir = dir.openNextFile();
 	  if( fileDir )
 	  {
 
