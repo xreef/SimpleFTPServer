@@ -3,9 +3,10 @@
 [Instruction on FTP server on esp8266 and esp32](https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32)
 
 Simple FTP Server for 
- - esp8266 (SPIFFs, LittleFS)
- - esp32 (SPIFFS)
- - Arduino (SD with 8.3 file format)
+ - esp8266 (Flash: SPIFFs, LittleFS. SD: SD, SdFat 2)
+ - esp32 (SPIFFS, SdFat)
+ - Arduino (SD with 8.3 file format, SdFat 2)
+ - Wio Terminal (SdFat 2)
 
 <!-- wp:paragraph -->
 <p>When I develop a new solution I'd like to divide the application in layer, and so I'd like focus my attention in only one aspect at time. </p>
