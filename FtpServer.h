@@ -18,7 +18,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2020-12-08"
+#define FTP_SERVER_VERSION "2021-06-13"
 
 #include <FtpServerKey.h>
 #if ARDUINO >= 100
@@ -358,48 +358,6 @@
 	#define DEBUG_PRINTLN(...) {}
 #endif
 
-
-//#if FTP_FILESYST <= FTP_SDFAT2
-//  #include <SdFat.h>
-//  #define FTP_FS sd
-//  #define FTP_FILE SdFile
-//  #define FTP_DIR SdFile
-//  extern SdFat FTP_FS;
-//#elif FTP_FILESYST == FTP_SPIFM
-//  #include <SdFat.h>
-//  #include <Adafruit_SPIFlash.h>
-//  #define FTP_FS fatfs
-//  #define FTP_FILE File
-//  #define FTP_DIR File
-//  extern FatFileSystem FTP_FS;
-//  extern Adafruit_SPIFlash flash;
-//#elif FTP_FILESYST == FTP_FATFS
-//  #include <FatFs.h>
-//  #define FTP_FS sdff
-//  #define FTP_FILE FileFs
-//  #define FTP_DIR DirFs
-//  extern FatFsClass FTP_FS;
-//  #define O_READ     FA_READ
-//  #define O_WRITE    FA_WRITE
-//  #define O_RDWR     FA_READ | FA_WRITE
-//  #define O_CREAT    FA_CREATE_ALWAYS
-//  #define O_APPEND   FA_OPEN_APPEND
-//#endif
-//
-//#ifdef ESP8266
-//  #define FTP_SERVER WiFiServer
-//  #define FTP_CLIENT WiFiClient
-//  #define FTP_LOCALIP() WiFi.localIP()
-//  #define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//  #define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
-//#else
-//  #define FTP_SERVER EthernetServer
-//  #define FTP_CLIENT EthernetClient
-//  #define FTP_LOCALIP() Ethernet.localIP()
-//  #define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
-//  #define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
-//#endif
-
 #define FTP_USER "arduino"        // Default user'name
 #define FTP_PASS "test"           // Default password
 
@@ -454,13 +412,6 @@ enum FtpTransferOperation {
 	  FTP_DOWNLOAD_ERROR = 5,
 	  FTP_UPLOAD_ERROR = 5
 };
-/*
-class FtpFile : public SdFile
-{
-#if STORAGE_TYPE == FTP_SPIFM
-#endif
-};
-*/
 
 class FtpServer
 {
@@ -515,7 +466,7 @@ private:
 
   const char* getFileName(FTP_FILE *file){
 	#if STORAGE_TYPE <= STORAGE_SDFAT2
-	  int max_characters = 25;
+	  int max_characters = 100;
 	  char f_name[max_characters];
 	  file->getName(f_name, max_characters);
 	  String filename = String(f_name);

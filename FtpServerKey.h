@@ -18,7 +18,7 @@
 #define FTP_SERVER_CONFIG_H
 
 // Uncomment to enable printing out nice debug messages.
-#define FTP_SERVER_DEBUG
+//#define FTP_SERVER_DEBUG
 
 // Define where debug output will be printed.
 #define DEBUG_PRINTER Serial
@@ -30,7 +30,7 @@
 #define STORAGE_SD 4	 // Standard SD library (suitable for Arduino esp8266 and esp32
 #define STORAGE_SPIFFS 5 // SPIFFS
 #define STORAGE_LITTLEFS 6 // LITTLEFS
-#define STORAGE_SEEED_SD 7 // Seeed_SD library
+#define STORAGE_SEEED_SD 7 // Seeed_SD library bug https://github.com/Seeed-Studio/Seeed_Arduino_FS/issues/8
 
 #define NETWORK_ESP8266_ASYNC (0)
 #define NETWORK_ESP8266 (1)
@@ -55,8 +55,12 @@
 	#define DEFAULT_STORAGE_TYPE_ARDUINO STORAGE_SDFAT2
 #endif
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO_SAMD
-	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD NETWORK_SEEED_RTL8720DN	// NETWORK_WiFiNINA
-	#define DEFAULT_STORAGE_TYPE_SAMD STORAGE_SDFAT2  // STORAGE_SD
+// Wio Terminal
+	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD NETWORK_SEEED_RTL8720DN
+	#define DEFAULT_STORAGE_TYPE_SAMD STORAGE_SDFAT2
+// Arduino SAMD
+//	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD NETWORK_WiFiNINA // NETWORK_SEEED_RTL8720DN	// NETWORK_WiFiNINA
+//	#define DEFAULT_STORAGE_TYPE_SAMD STORAGE_SD // STORAGE_SDFAT2  // STORAGE_SD
 #endif
 
 //#define SD_CS_PIN 4
@@ -72,6 +76,6 @@
 // Transfer speed depends of this value
 // Best value depends on many factors: SD card, client side OS, ... 
 // But it can be reduced to 512 if memory usage is critical.
-#define FTP_BUF_SIZE 2048 //1024 // 512  
+#define FTP_BUF_SIZE 2048 //1024 // 512
 
 #endif // FTP_SERVER_CONFIG_H
