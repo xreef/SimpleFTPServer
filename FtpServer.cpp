@@ -225,7 +225,8 @@ uint8_t FtpServer::handleFTP() {
 
 void FtpServer::clientConnected()
 {
-	DEBUG_PRINTLN( F(" Client connected!") );
+	DEBUG_PRINTLN( F(" Client connected!") 
+  if (_welcomemsg="") { _welcomemsg="Welcome to FTP for Arduino";}		    
   client.println(F("220--- "; client.print(_welcomemsg); client.println(" ---"));
   client.println(F("220---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
