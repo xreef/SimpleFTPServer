@@ -49,7 +49,7 @@ void setup(void){
   if (SPIFFS.begin()) {
 #endif
       Serial.println("SPIFFS opened!");
-      ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.   (default 21, 50009 for PASV)
+      ftpSrv.begin("esp8266","esp8266","Welcome FTP for Arduino");    //username, password for ftp.   (default 21, 50009 for PASV), welcome mseeage (optional)
   }    
 }
 void loop(void){
