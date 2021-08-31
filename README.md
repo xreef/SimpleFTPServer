@@ -78,7 +78,7 @@ void setup(void){
   if (SPIFFS.begin()) {
 #endif
       Serial.println("SPIFFS opened!");
-      ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.  set ports in ESP8266FtpServer.h  (default 21, 50009 for PASV)
+      ftpSrv.begin("esp8266","esp8266","Welcome message optional");    //username, password for ftp.  set ports in ESP8266FtpServer.h  (default 21, 50009 for PASV)
   }    
 }
 void loop(void){
