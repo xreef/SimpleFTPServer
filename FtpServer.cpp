@@ -1349,6 +1349,7 @@ bool FtpServer::doMlsd()
 	#if ESP8266
 		String fn = dir.fileName();
 		long fz = dir.fileSize();
+		FTP_DIR fileDir = dir;
 	#elif STORAGE_TYPE == STORAGE_SEEED_SD
 		String fn = fileDir.name();
 		fn.remove(0, strlen(dir.name()));
