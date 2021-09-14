@@ -250,12 +250,24 @@
 		#define FTP_FILE_WRITE_CREATE "w"
 	#endif
 #elif(STORAGE_TYPE == STORAGE_SD)
-		#include <SPI.h>
-		#include <SD.h>
+	#include <SPI.h>
+	#include <SD.h>
 
-		#define STORAGE_MANAGER SD
-  	  #define FTP_FILE File
-  	  #define FTP_DIR File
+	#define STORAGE_MANAGER SD
+  	#define FTP_FILE File
+  	#define FTP_DIR File
+
+	#define FTP_FILE_READ FILE_READ
+	#define FTP_FILE_READ_ONLY FILE_READ
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+#ifdef ESP8266
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_WRITE
+#else
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_APPEND
+#endif
+	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
 #elif(STORAGE_TYPE == STORAGE_SEEED_SD)
 	#include <Seeed_FS.h>
@@ -499,7 +511,7 @@ private:
 #endif
 #if (STORAGE_TYPE == STORAGE_SEEED_SD)
   bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
-#elif (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
+#elif (STORAGE_TYPE == STORAGE_SD && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
   bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS )
   bool openFile( const char * path, const char * readType );
@@ -508,6 +520,7 @@ private:
   bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #else
   bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
+  bool openFile( const char * path, const char * readType );
 //  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #endif
 //  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );

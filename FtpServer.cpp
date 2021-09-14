@@ -1146,7 +1146,7 @@ bool FtpServer::doList()
 	#elif STORAGE_TYPE == STORAGE_SEEED_SD
 		String fn = fileDir.name();
 		fn.remove(0, strlen(dir.name()));
-		if (fn[0]=='/') { fn.remove(0, 1); }
+		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 		long fz = fileDir.size();
 	#else
 		data.print( long( fileDir.size()) );
@@ -1281,11 +1281,11 @@ bool FtpServer::doMlsd()
 
 	#if ESP8266
 		String fn = dir.fileName();
-		fn.remove(0, 1);
+		fn.remove(0, fn.lastIndexOf("/")+1);
 		long fz = dir.fileSize();
 	#else
 		String fn = fileDir.name();
-		fn.remove(0, 1);
+		fn.remove(0, fn.lastIndexOf("/")+1);
 		long fz = fileDir.size();
 	#endif
 
@@ -1353,11 +1353,11 @@ bool FtpServer::doMlsd()
 	#elif STORAGE_TYPE == STORAGE_SEEED_SD
 		String fn = fileDir.name();
 		fn.remove(0, strlen(dir.name()));
-		if (fn[0]=='/') { fn.remove(0, 1); }
+		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 		long fz = fileDir.size();
 	#else
 		String fn = fileDir.name();
-		fn.remove(0, 1);
+		fn.remove(0, fn.lastIndexOf("/")+1);
 		long fz = fileDir.size();
 	#endif
 
@@ -1396,9 +1396,16 @@ bool FtpServer::doMlsd()
 		strcpy(dtStr, "19700101000000");
 
 
-		fn.remove(0, 1);
-		long fz = dir.fileSize();
+//		long fz = dir.fileSize();
 		String fn = fileDir.name();
+
+//#ifdef ESP32
+		fn.remove(0, fn.lastIndexOf("/")+1);
+//#else if !defined(ESP8266)
+//		fn.remove(0, 1);
+//#endif
+
+
 		long fz = fileDir.size();
 
 		data.print( F("Type=") );
@@ -1769,7 +1776,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
 			return true;
 		}
 }
-#elif (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
+#elif (STORAGE_TYPE == STORAGE_SD && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
 		DEBUG_PRINT( path );
@@ -1832,7 +1839,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
   		DEBUG_PRINT( path );
   		DEBUG_PRINT(F(" readType ") );
   		DEBUG_PRINTLN(readType);
-  #if (STORAGE_TYPE == STORAGE_SD)
+  #if (STORAGE_TYPE == STORAGE_SD && !defined(ESP32))
   		if (readType == 0X01) {
   			readType = FILE_READ;
   		}else {
@@ -1985,7 +1992,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 		if(myFileOut) {
 			while (myFileIn.available() > 0)
 			      {
-			        int i = myFileIn.readBytes(buf, FTP_BUF_SIZE);
+			        int i = myFileIn.readBytes((char*)buf, FTP_BUF_SIZE);
 			        myFileOut.write(buf, i);
 			      }
 			      // done, close the destination file

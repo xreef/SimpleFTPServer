@@ -1,5 +1,5 @@
 /*
- * FtpServer esp8266 and esp32 with SPIFFS
+ * FtpServer esp8266 and esp32 with SD
  *
  * AUTHOR:  Renzo Mischianti
  *
@@ -7,17 +7,13 @@
  *
  */
 
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#elif defined ESP32
 #include <WiFi.h>
-#include "SPIFFS.h"
-#endif
+#include "SD.h"
 
 #include <SimpleFTPServer.h>
 
-const char* ssid = "YOUR_SSID";
-const char* password = "YOUR_PASS";
+const char* ssid = "<YOUR-SSID>";
+const char* password = "<YOUR-PASSWD>";
 
 
 FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
@@ -62,7 +58,6 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsi
 	Serial.println(transferredSize);
 };
 
-
 void setup(void){
   Serial.begin(115200);
   WiFi.begin(ssid, password);
@@ -81,22 +76,21 @@ void setup(void){
 
 
   /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
-  
+
   /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
-#ifdef ESP32       //esp32 we send true to format spiffs if cannot mount
-  if (SPIFFS.begin(true)) {
-#elif defined ESP8266
-  if (SPIFFS.begin()) {
-#endif
+  SPI.begin(14, 2, 15, 13); //SCK, MISO, MOSI,SS
+
+  if (SD.begin(13, SPI)) {
+      Serial.println("SD opened!");
+
       ftpSrv.setCallback(_callback);
       ftpSrv.setTransferCallback(_transferCallback);
 
-      Serial.println("SPIFFS opened!");
       ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.   (default 21, 50009 for PASV)
-  }    
+  }
 }
 void loop(void){
-  ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!  
+  ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!
  // server.handleClient();   //example if running a webserver you still need to call .handleClient();
- 
+
 }
