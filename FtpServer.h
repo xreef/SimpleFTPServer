@@ -592,8 +592,12 @@ private:
   ftpTransfer transferStage;          // stage of data connexion
   ftpDataConn dataConn;               // type of data connexion
 
+  #ifdef ESP32
+  uint8_t  __attribute__((aligned(4))) // need to be aligned to 32bit for Esp8266 SPIClass::transferBytes()
+  #else
   uint8_t  __attribute__((packed, aligned(4))) // need to be aligned to 32bit for Esp8266 SPIClass::transferBytes()
-           buf[ FTP_BUF_SIZE ];       // data buffer for transfers
+  #endif
+             buf[ FTP_BUF_SIZE ];       // data buffer for transfers
   char     cmdLine[ FTP_CMD_SIZE ];   // where to store incoming char from client
   char     cwdName[ FTP_CWD_SIZE ];   // name of current directory
   char     rnfrName[ FTP_CWD_SIZE ];  // name of file for RNFR command
