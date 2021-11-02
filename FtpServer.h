@@ -232,19 +232,41 @@
 #endif
 
 		#define STORAGE_MANAGER SPIFFS
+#elif(STORAGE_TYPE == STORAGE_FFAT)
+		#include "FS.h"
+		#include "FFat.h"
+
+		#define STORAGE_MANAGER FFat
+
+	    #define FTP_FILE File
+	    #define FTP_DIR File
+
+		#define FTP_FILE_READ "r"
+		#define FTP_FILE_READ_ONLY "r"
+		#define FTP_FILE_READ_WRITE "w"
+		#define FTP_FILE_WRITE_APPEND "a"
+		#define FTP_FILE_WRITE_CREATE "w"
+
 #elif(STORAGE_TYPE == STORAGE_LITTLEFS)
+	#if ESP8266
 		#include "LittleFS.h"
 		#define STORAGE_MANAGER LittleFS
 		#define FTP_FILE File
 		#define FTP_DIR Dir
-	#if ESP8266
+
 		#define FTP_FILE_READ "r"
 		#define FTP_FILE_READ_ONLY "r"
 		#define FTP_FILE_READ_WRITE "w+"
 		#define FTP_FILE_WRITE_APPEND "a+"
 		#define FTP_FILE_WRITE_CREATE "w+"
 	#else
+		#include "LITTLEFS.h"
+		#define STORAGE_MANAGER LITTLEFS
+		#define FTP_FILE File
+		#define FTP_DIR File
+
 		#define FTP_FILE_READ "r"
+		#define FTP_FILE_READ_ONLY "r"
 		#define FTP_FILE_READ_WRITE "w"
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
@@ -493,7 +515,12 @@ private:
 #if STORAGE_TYPE == STORAGE_SPIFFS || (STORAGE_TYPE == STORAGE_SD && FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)
 	  if (strcmp(path, "/") == 0) return true;
 #endif
-   	  return STORAGE_MANAGER.exists( path );
+#if STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))
+	  FTP_DIR f = STORAGE_MANAGER.open(path, "r");
+	  return (f == true);
+#else
+	  return STORAGE_MANAGER.exists( path );
+#endif
   };
   bool     remove( const char * path ) { return STORAGE_MANAGER.remove( path ); };
 #if STORAGE_TYPE == STORAGE_SPIFFS
@@ -513,7 +540,7 @@ private:
   bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #elif (STORAGE_TYPE == STORAGE_SD && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
   bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
-#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS )
+#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT )
   bool openFile( const char * path, const char * readType );
 //  bool openFile( char path[ FTP_CWD_SIZE ], int readTypeInt );
 #elif STORAGE_TYPE <= STORAGE_SDFAT2
@@ -576,6 +603,9 @@ private:
 #elif STORAGE_TYPE == STORAGE_FATFS
   uint32_t capacity() { return STORAGE_MANAGER.capacity(); };
   uint32_t free() { return STORAGE_MANAGER.free(); };
+#elif STORAGE_TYPE == STORAGE_FFAT
+  uint32_t capacity() { return STORAGE_MANAGER.totalBytes(); };
+  uint32_t free() { return STORAGE_MANAGER.freeBytes(); };
 #endif
 	bool    legalChar( char c ) // Return true if char c is allowed in a long file name
 	{

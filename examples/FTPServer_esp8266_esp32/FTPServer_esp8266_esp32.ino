@@ -23,45 +23,53 @@ const char* password = "YOUR_PASS";
 FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
 
 void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
-	Serial.print(">>>>>>>>>>>>>>> _callback " );
-	Serial.print(ftpOperation);
-	/* FTP_CONNECT,
-	 * FTP_DISCONNECT,
-	 * FTP_FREE_SPACE_CHANGE
-	 */
-	Serial.print(" ");
-	Serial.print(freeSpace);
-	Serial.print(" ");
-	Serial.println(totalSpace);
-
-	// freeSpace : totalSpace = x : 360
-
-	if (ftpOperation == FTP_CONNECT) Serial.println(F("CONNECTED"));
-	if (ftpOperation == FTP_DISCONNECT) Serial.println(F("DISCONNECTED"));
+  switch (ftpOperation) {
+    case FTP_CONNECT:
+      Serial.println(F("FTP: Connected!"));
+      break;
+    case FTP_DISCONNECT:
+      Serial.println(F("FTP: Disconnected!"));
+      break;
+    case FTP_FREE_SPACE_CHANGE:
+      Serial.printf("FTP: Free space change, free %u of %u!\n", freeSpace, totalSpace);
+      break;
+    default:
+      break;
+  }
 };
 void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){
-	Serial.print(">>>>>>>>>>>>>>> _transferCallback " );
-	Serial.print(ftpOperation);
-	/* FTP_UPLOAD_START = 0,
-	 * FTP_UPLOAD = 1,
-	 *
-	 * FTP_DOWNLOAD_START = 2,
-	 * FTP_DOWNLOAD = 3,
-	 *
-	 * FTP_TRANSFER_STOP = 4,
-	 * FTP_DOWNLOAD_STOP = 4,
-	 * FTP_UPLOAD_STOP = 4,
-	 *
-	 * FTP_TRANSFER_ERROR = 5,
-	 * FTP_DOWNLOAD_ERROR = 5,
-	 * FTP_UPLOAD_ERROR = 5
-	 */
-	Serial.print(" ");
-	Serial.print(name);
-	Serial.print(" ");
-	Serial.println(transferredSize);
-};
+  switch (ftpOperation) {
+    case FTP_UPLOAD_START:
+      Serial.println(F("FTP: Upload start!"));
+      break;
+    case FTP_UPLOAD:
+      Serial.printf("FTP: Upload of file %s byte %u\n", name, transferredSize);
+      break;
+    case FTP_TRANSFER_STOP:
+      Serial.println(F("FTP: Finish transfer!"));
+      break;
+    case FTP_TRANSFER_ERROR:
+      Serial.println(F("FTP: Transfer error!"));
+      break;
+    default:
+      break;
+  }
 
+  /* FTP_UPLOAD_START = 0,
+   * FTP_UPLOAD = 1,
+   *
+   * FTP_DOWNLOAD_START = 2,
+   * FTP_DOWNLOAD = 3,
+   *
+   * FTP_TRANSFER_STOP = 4,
+   * FTP_DOWNLOAD_STOP = 4,
+   * FTP_UPLOAD_STOP = 4,
+   *
+   * FTP_TRANSFER_ERROR = 5,
+   * FTP_DOWNLOAD_ERROR = 5,
+   * FTP_UPLOAD_ERROR = 5
+   */
+};
 
 void setup(void){
   Serial.begin(115200);

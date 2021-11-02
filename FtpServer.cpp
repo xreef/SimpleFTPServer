@@ -917,7 +917,7 @@ bool FtpServer::dataConnected()
 bool FtpServer::openDir( FTP_DIR * pdir )
 {
   bool openD;
-#if STORAGE_TYPE == STORAGE_LITTLEFS
+#if (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP8266))
   if( cwdName == 0 ) {
     dir = STORAGE_MANAGER.openDir( "/" );
   } else {
@@ -930,6 +930,16 @@ bool FtpServer::openDir( FTP_DIR * pdir )
   }
 #elif STORAGE_TYPE == STORAGE_SD
   if( cwdName == 0 ) {
+	    dir = STORAGE_MANAGER.open( "/" );
+	  } else {
+	    dir = STORAGE_MANAGER.open( cwdName );
+	  }
+	  openD = true;
+	  if( ! openD ) {
+		client.print( F("550 Can't open directory ") ); client.println( cwdName );
+	  }
+#elif STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))
+	  if( cwdName == 0 ) {
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
 	    dir = STORAGE_MANAGER.open( cwdName );
@@ -1121,7 +1131,7 @@ bool FtpServer::doList()
     nbMatch ++;
     return true;
   }
-#elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD
+#elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT
 	#if ESP8266
 	  if( dir.next())
 	#else
@@ -1306,7 +1316,7 @@ bool FtpServer::doMlsd()
 		nbMatch ++;
 		return true;
 	  }
-#elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD
+#elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT
 	  DEBUG_PRINTLN("DIR MLSD ");
 	#if ESP8266
 	  if( dir.next())
@@ -1747,7 +1757,7 @@ char * FtpServer::makeDateTimeStr( char * tstr, uint16_t date, uint16_t time )
 
 
 uint16_t FtpServer::fileSize( FTP_FILE file ) {
-#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD)
+#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD)
 	return file.size();
 #else
 	return file.fileSize();
@@ -1798,7 +1808,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
 			return true;
 		}
 }
-#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS )
+#elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT )
   bool FtpServer::openFile( const char * path, const char * readType ) {
   		DEBUG_PRINT(F("File to open ") );
   		DEBUG_PRINT( path );
@@ -1860,7 +1870,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
 // Return true if path points to a directory
 bool FtpServer::isDir( char * path )
 {
-#if STORAGE_TYPE == STORAGE_LITTLEFS
+#if (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP8266))
 	  FTP_DIR dir;
 	  bool res;
 	  dir = STORAGE_MANAGER.openDir( path );
@@ -1872,7 +1882,7 @@ bool FtpServer::isDir( char * path )
 #elif STORAGE_TYPE == STORAGE_SPIFFS
 	if (strcmp(path, "/") == 0)  { return true; }
 	return false; // no directory support
-#elif STORAGE_TYPE == STORAGE_SEEED_SD
+#elif STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))
 	  FTP_DIR dir;
 	  bool res;
 	  dir = STORAGE_MANAGER.open( path );
@@ -1918,7 +1928,7 @@ bool FtpServer::isDir( char * path )
 bool FtpServer::timeStamp( char * path, uint16_t year, uint8_t month, uint8_t day,
                            uint8_t hour, uint8_t minute, uint8_t second )
 {
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD
+#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS  || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD
 //	struct tm tmDate = { second, minute, hour, day, month, year };
 //    time_t rawtime = mktime(&tmDate);
 
@@ -1962,7 +1972,7 @@ bool FtpServer::getFileModTime( char * path, uint16_t * pdate, uint16_t * ptime 
 #if STORAGE_TYPE != STORAGE_FATFS
 bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 {
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
+#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT
 	#if ESP8266
 		return dir.fileTime();
 	#else
