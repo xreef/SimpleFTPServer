@@ -4,7 +4,7 @@
 
 Simple FTP Server for 
  - esp8266 (Flash: SPIFFs, LittleFS. SD: SD, SdFat 2)
- - esp32 (SPIFFS, SdFat)
+ - esp32 (SPIFFS, LITTLEFS, FFAT, SdFat)
  - Arduino (SD with 8.3 file format, SdFat 2)
  - Wio Terminal (SdFat 2)
 
