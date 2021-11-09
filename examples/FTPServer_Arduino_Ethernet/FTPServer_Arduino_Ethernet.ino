@@ -55,7 +55,7 @@ void setup(void){
   Serial.println(Ethernet.localIP());
 
   Serial.println("SPIFFS opened!");
-  ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.
+  ftpSrv.begin("esp8266","esp8266","Welcome to FTP for Arduino");    //username, password, optional welcome message for ftp.
 }
 void loop(void){
   ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!  

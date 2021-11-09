@@ -360,6 +360,7 @@
 
 #define FTP_USER "arduino"        // Default user'name
 #define FTP_PASS "test"           // Default password
+#define FTP_WELCOMEMSG "Welcome to FTP for Arduino"  // Default Welcome message
 
 #define FTP_CMD_PORT 21           // Command port on wich server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
@@ -370,6 +371,7 @@
 #define FTP_CWD_SIZE FF_MAX_LFN+8 // max size of a directory name
 #define FTP_FIL_SIZE FF_MAX_LFN   // max size of a file name 
 #define FTP_CRED_SIZE 16          // max size of username and password
+#define FTP_WELCOME_SIZE 50       // max size of welcome message
 #define FTP_NULLIP() IPAddress(0,0,0,0)
 
 enum ftpCmd { FTP_Stop = 0,       //  In this stage, stop any connection
@@ -418,7 +420,7 @@ class FtpServer
 public:
   FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
 
-  void    begin( const char * _user, const char * _pass );
+  void    begin( const char * _user, const char * _pass, const char * _welcomemsg="" );
   void    credentials( const char * _user, const char * _pass );
   uint8_t handleFTP();
 
@@ -603,6 +605,7 @@ private:
   char     rnfrName[ FTP_CWD_SIZE ];  // name of file for RNFR command
   char     user[ FTP_CRED_SIZE ];     // user name
   char     pass[ FTP_CRED_SIZE ];     // password
+  char     welcomemsg [ FTP_WELCOME_SIZE ];  // welcome msg
   char     command[ 5 ];              // command sent by client
   bool     rnfrCmd;                   // previous command was RNFR
   char *   parameter;                 // point to begin of parameters sent by client

@@ -60,7 +60,7 @@ FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
   iniVariables();
 }
 
-void FtpServer::begin( const char * _user, const char * _pass )
+void FtpServer::begin( const char * _user, const char * _pass, const char * _welcomemsg )
 {
   // Tells the ftp server to begin listening for incoming connection
   ftpServer.begin();
@@ -80,6 +80,11 @@ void FtpServer::begin( const char * _user, const char * _pass )
     strcpy( pass, _pass );
   }else{
 	  strcpy( pass, FTP_PASS );
+  }
+ if( strlen( _welcomemsg ) > 0 && strlen( _welcomemsg ) < FTP_WELCOME_SIZE ) {
+    strcpy( welcomemsg, _welcomemsg );
+  }else{
+	  strcpy( welcomemsg, FTP_WELCOMEMSG );
   }
 
   dataServer.begin();
@@ -225,8 +230,8 @@ uint8_t FtpServer::handleFTP() {
 
 void FtpServer::clientConnected()
 {
-	DEBUG_PRINTLN( F(" Client connected!") );
-  client.println(F("220--- Welcome to FTP for Arduino ---"));
+	DEBUG_PRINTLN( F(" Client connected!")  );
+  client.print(F("220---   ")); client.print(welcomemsg); client.println(F("   ---"));
   client.println(F("220---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
   iCL = 0;

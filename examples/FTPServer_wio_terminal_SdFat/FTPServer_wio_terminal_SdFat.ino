@@ -90,7 +90,7 @@ void setup()
     }
 
 
-    ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.
+    ftpSrv.begin("esp8266","esp8266","Welcome to FTP for Arduino");    //username, password, optional welcome message for ftp.
   }
 
   void loop(void) {
