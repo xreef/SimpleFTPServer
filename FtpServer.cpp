@@ -60,7 +60,7 @@ FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
   iniVariables();
 }
 
-void FtpServer::begin( const char * _user, const char * _pass )
+void FtpServer::begin( const char * _user, const char * _pass, const char * _welcomeMessage )
 {
   // Tells the ftp server to begin listening for incoming connection
   ftpServer.begin();
@@ -72,15 +72,23 @@ void FtpServer::begin( const char * _user, const char * _pass )
 //  strcpy( user, FTP_USER );
 //  strcpy( pass, FTP_PASS );
   if( strlen( _user ) > 0 && strlen( _user ) < FTP_CRED_SIZE ) {
-    strcpy( user, _user );
+    //strcpy( user, _user );
+	  this->user = _user;
   }else{
-	strcpy( user, FTP_USER );
+//	strcpy( user, FTP_USER );
+	  this->user = FTP_USER;
   }
   if( strlen( _pass ) > 0 && strlen( _pass ) < FTP_CRED_SIZE ) {
-    strcpy( pass, _pass );
+//    strcpy( pass, _pass );
+	  this->pass = _pass;
   }else{
-	  strcpy( pass, FTP_PASS );
+//	  strcpy( pass, FTP_PASS );
+	  this->pass = FTP_PASS;
   }
+
+//  strcpy(_welcomeMessage, welcomeMessage);
+
+  this->welcomeMessage = _welcomeMessage;
 
   dataServer.begin();
 #if defined(ESP8266) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
@@ -95,9 +103,11 @@ void FtpServer::begin( const char * _user, const char * _pass )
 void FtpServer::credentials( const char * _user, const char * _pass )
 {
   if( strlen( _user ) > 0 && strlen( _user ) < FTP_CRED_SIZE )
-    strcpy( user, _user );
+//    strcpy( user, _user );
+	  this->user = user;
   if( strlen( _pass ) > 0 && strlen( _pass ) < FTP_CRED_SIZE )
-    strcpy( pass, _pass );
+//    strcpy( pass, _pass );
+	  this->pass = _pass;
 }
 
 void FtpServer::iniVariables()
@@ -226,7 +236,7 @@ uint8_t FtpServer::handleFTP() {
 void FtpServer::clientConnected()
 {
 	DEBUG_PRINTLN( F(" Client connected!") );
-  client.println(F("220--- Welcome to FTP for Arduino ---"));
+  client.print(F("220---")); client.print(welcomeMessage); client.println(F(" ---"));
   client.println(F("220---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
   iCL = 0;

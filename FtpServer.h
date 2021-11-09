@@ -18,7 +18,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2021-06-13"
+#define FTP_SERVER_VERSION "2021-11-09"
 
 #include <FtpServerKey.h>
 #if ARDUINO >= 100
@@ -452,7 +452,7 @@ class FtpServer
 public:
   FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
 
-  void    begin( const char * _user, const char * _pass );
+  void    begin( const char * _user = FTP_USER, const char * _pass = FTP_PASS, const char * welcomeMessage = "Welcome to Simply FTP server" );
   void    credentials( const char * _user, const char * _pass );
   uint8_t handleFTP();
 
@@ -640,11 +640,12 @@ private:
   char     cmdLine[ FTP_CMD_SIZE ];   // where to store incoming char from client
   char     cwdName[ FTP_CWD_SIZE ];   // name of current directory
   char     rnfrName[ FTP_CWD_SIZE ];  // name of file for RNFR command
-  char     user[ FTP_CRED_SIZE ];     // user name
-  char     pass[ FTP_CRED_SIZE ];     // password
+  const char *   user;     // user name
+  const char *   pass;     // password
   char     command[ 5 ];              // command sent by client
   bool     rnfrCmd;                   // previous command was RNFR
   char *   parameter;                 // point to begin of parameters sent by client
+  const char *   welcomeMessage;
   uint16_t cmdPort,
            pasvPort,
            dataPort;
