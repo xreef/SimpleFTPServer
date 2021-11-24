@@ -1157,8 +1157,11 @@ bool FtpServer::doList()
 
 		  if( dir.isDirectory()) {
 			  data.print( F("+/,\t") );
+			  DEBUG_PRINT(F("+/,\t"));
 		  } else {
-		data.print( F("+r,s") );
+			data.print( F("+r,s") );
+			DEBUG_PRINT(F("+r,s"));
+		  }
 	#if ESP8266
 		data.print( long( dir.fileSize()) );
 		data.print( F(",\t") );
@@ -1172,8 +1175,13 @@ bool FtpServer::doList()
 		data.print( long( fileDir.size()) );
 		data.print( F(",\t") );
 		data.println( fileDir.name() );
+
+		DEBUG_PRINT( long( fileDir.size()));
+		DEBUG_PRINT( F(",\t") );
+		DEBUG_PRINTLN( fileDir.name() );
+
 	#endif
-		  }
+
 
     nbMatch ++;
     return true;
