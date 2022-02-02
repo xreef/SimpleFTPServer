@@ -260,8 +260,14 @@
 		#define FTP_FILE_WRITE_APPEND "a+"
 		#define FTP_FILE_WRITE_CREATE "w+"
 	#else
+#if ESP_ARDUINO_VERSION_MAJOR >= 2
+		#include "FS.h"
+		#include "LittleFS.h"
+		#define STORAGE_MANAGER LittleFS
+#else
 		#include "LITTLEFS.h"
 		#define STORAGE_MANAGER LITTLEFS
+#endif
 		#define FTP_FILE File
 		#define FTP_DIR File
 
@@ -453,6 +459,8 @@ public:
   FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
 
   void    begin( const char * _user = FTP_USER, const char * _pass = FTP_PASS, const char * welcomeMessage = "Welcome to Simply FTP server" );
+  void 	  end();
+  void 	  setLocalIp(IPAddress localIp);
   void    credentials( const char * _user, const char * _pass );
   uint8_t handleFTP();
 

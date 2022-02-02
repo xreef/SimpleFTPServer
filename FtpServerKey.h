@@ -18,7 +18,7 @@
 #define FTP_SERVER_CONFIG_H
 
 // Uncomment to enable printing out nice debug messages.
-//#define FTP_SERVER_DEBUG
+// #define FTP_SERVER_DEBUG
 
 // Define where debug output will be printed.
 #define DEBUG_PRINTER Serial
@@ -35,6 +35,7 @@
 
 #define NETWORK_ESP8266_ASYNC (0)
 #define NETWORK_ESP8266 (1)
+// && (defined(ESP8266) && ARDUINO_ESP8266_MAJOR<3)
 #define NETWORK_ESP8266_242 (6)
 #define NETWORK_W5100 (2)
 #define NETWORK_ENC28J60 (3)
@@ -49,7 +50,7 @@
 #endif
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 	NETWORK_ESP32
-	#define DEFAULT_STORAGE_TYPE_ESP32 STORAGE_SPIFFS
+	#define DEFAULT_STORAGE_TYPE_ESP32 STORAGE_LITTLEFS
 #endif
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO 	NETWORK_W5100

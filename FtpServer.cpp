@@ -100,6 +100,22 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   iniVariables();
 }
 
+void FtpServer::end()
+{
+    if(client.connected()) {
+        disconnectClient();
+    }
+
+    ftpServer.end();
+    dataServer.end();
+    DEBUG_PRINTLN(F("Stop server!"));
+
+    cmdStage = FTP_Init;
+}
+void FtpServer::setLocalIp(IPAddress localIp)
+{
+	this->localIp = localIp;
+}
 void FtpServer::credentials( const char * _user, const char * _pass )
 {
   if( strlen( _user ) > 0 && strlen( _user ) < FTP_CRED_SIZE )
@@ -432,8 +448,8 @@ bool FtpServer::processCommand()
   {
     data.stop();
     dataServer.begin();
-    if((((uint32_t) NET_CLASS.localIP()) & ((uint32_t) NET_CLASS.subnetMask())) ==
-       (((uint32_t) client.remoteIP()) & ((uint32_t) NET_CLASS.subnetMask()))) {
+    if (((((uint32_t) NET_CLASS.localIP()) & ((uint32_t) NET_CLASS.subnetMask())) ==
+       (((uint32_t) client.remoteIP()) & ((uint32_t) NET_CLASS.subnetMask()))) && (uint32_t)localIp <= 0) {
       dataIp = NET_CLASS.localIP();
     } else {
       dataIp = localIp;
