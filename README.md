@@ -10,6 +10,7 @@
  - Wio Terminal (SdFat 2, and native FAT)
 
 #### Changelog
+- 2022-02-22 Add anonymous user and implement correct RFC (#9 now work correctly with File Explorer)
 - 2022-02-01 Add workaround to start FTP server before connection, add end and setLocalIP method.
 
 <!-- wp:paragraph -->

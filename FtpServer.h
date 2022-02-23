@@ -288,12 +288,12 @@
 	#define FTP_FILE_READ FILE_READ
 	#define FTP_FILE_READ_ONLY FILE_READ
 	#define FTP_FILE_READ_WRITE FILE_WRITE
-#ifdef ESP8266
-	#define FTP_FILE_READ_WRITE FILE_WRITE
-	#define FTP_FILE_WRITE_APPEND FILE_WRITE
-#else
+#ifdef ESP32
 	#define FTP_FILE_READ_WRITE FILE_WRITE
 	#define FTP_FILE_WRITE_APPEND FILE_APPEND
+#else
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_WRITE
 #endif
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
@@ -459,6 +459,8 @@ public:
   FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
 
   void    begin( const char * _user = FTP_USER, const char * _pass = FTP_PASS, const char * welcomeMessage = "Welcome to Simply FTP server" );
+  void    begin( const char * welcomeMessage = "Welcome to Simply FTP server" );
+
   void 	  end();
   void 	  setLocalIp(IPAddress localIp);
   void    credentials( const char * _user, const char * _pass );
@@ -574,8 +576,7 @@ private:
 	  FSInfo fi;
 	  STORAGE_MANAGER.info(fi);
 
-	  return fi.totalBytes -
-			  fi.usedBytes >> 1;
+	  return (fi.totalBytes - fi.usedBytes) >> 1;
   };
 #else
   uint32_t capacity() {
@@ -642,6 +643,8 @@ private:
   ftpCmd      cmdStage;               // stage of ftp command connexion
   ftpTransfer transferStage;          // stage of data connexion
   ftpDataConn dataConn;               // type of data connexion
+
+  bool anonymousConnection = false;
 
   uint8_t  __attribute__((packed, aligned(4))) // need to be aligned to 32bit for Esp8266 SPIClass::transferBytes()
            buf[ FTP_BUF_SIZE ];       // data buffer for transfers

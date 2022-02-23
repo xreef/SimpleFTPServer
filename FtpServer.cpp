@@ -62,6 +62,11 @@ FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
 
 void FtpServer::begin( const char * _user, const char * _pass, const char * _welcomeMessage )
 {
+	if ( strcmp( _user, "anonymous" ) != 0) {
+		DEBUG_PRINTLN(F("NOT ANONYMOUS"));
+		DEBUG_PRINTLN(_user);
+		this->anonymousConnection = false; // needed to reset after end of anonymnous and begin of not anonymous
+	}
   // Tells the ftp server to begin listening for incoming connection
   ftpServer.begin();
   #if defined(ESP8266) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
@@ -100,14 +105,22 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   iniVariables();
 }
 
+void FtpServer::begin( const char * _welcomeMessage ) {
+	this->anonymousConnection = true;
+	this->begin( "anonymous", "anonymous", _welcomeMessage);
+}
+
 void FtpServer::end()
 {
     if(client.connected()) {
         disconnectClient();
     }
 
+#if FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32
     ftpServer.end();
     dataServer.end();
+#endif
+
     DEBUG_PRINTLN(F("Stop server!"));
 
     cmdStage = FTP_Init;
@@ -297,7 +310,17 @@ bool FtpServer::processCommand()
   //
   if( CommandIs( "USER" ))
   {
-    if( ! strcmp( parameter, user ))
+	  DEBUG_PRINT(F("USER: "));
+	  DEBUG_PRINT(parameter);
+	  DEBUG_PRINT(F(" "));
+	  DEBUG_PRINTLN(user)
+
+	if (this->anonymousConnection &&  ! strcmp( parameter, user )) {
+    	DEBUG_PRINTLN( F(" Anonymous authentication Ok. Waiting for commands.") );
+
+      client.println(F("230 Ok") );
+      cmdStage = FTP_Cmd;
+	} else if( ! strcmp( parameter, user ))
     {
       client.println(F("331 Ok. Password required") );
       strcpy( cwdName, "/" );
@@ -1126,6 +1149,167 @@ bool FtpServer::doStore()
   return false;
 }
 
+void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const char* fn, long fz, const char* time, const char* user, bool writeFilename = true) {
+	if( isDirectory ) {
+		//			  data.print( F("+/,\t") );
+		//			  DEBUG_PRINT(F("+/,\t"));
+
+		data->print( F("drwxrwsr-x\t2\t"));
+		data->print( user );
+		data->print( F("\t") );
+		data->print( long( 4096 ) );
+		data->print( F("\t") );
+
+		DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
+		DEBUG_PRINT( user );
+		DEBUG_PRINT( F("\t") );
+
+		DEBUG_PRINT( long( 4096 ) );
+		DEBUG_PRINT( F("\t") );
+
+		data->print(time);
+		DEBUG_PRINT(time);
+
+		data->print( F("\t") );
+		if (writeFilename) data->println( fn );
+
+		DEBUG_PRINT( F("\t") );
+		if (writeFilename) DEBUG_PRINTLN( fn );
+
+	} else {
+//			data.print( F("+r,s") );
+//			DEBUG_PRINT(F("+r,s"));
+
+		data->print( F("-rw-rw-r--\t1\t") );
+		data->print( user );
+		data->print( F("\t") );
+		data->print( fz );
+		data->print( F("\t") );
+
+		DEBUG_PRINT( F("-rw-rw-r--\t1\t") );
+		DEBUG_PRINT( user );
+		DEBUG_PRINT( F("\t") );
+		DEBUG_PRINT( fz );
+		DEBUG_PRINT( F("\t") );
+
+		data->print(time);
+		DEBUG_PRINT(time);
+
+		data->print( F("\t") );
+		if (writeFilename) data->println( fn );
+
+		DEBUG_PRINT( F("\t") );
+		if (writeFilename) DEBUG_PRINTLN( fn );
+	}
+
+}
+
+#if defined(ESP32) || defined(ESP8266)
+//
+// Formats printable String from a time_t timestamp
+//
+String makeDateTimeStrList(time_t ft, bool dateContracted = false)
+{
+  String tmp;
+  // a buffer with enough space for the formats
+  char buf[25];
+  char *b = buf;
+
+  // break down the provided file time
+  struct tm _tm;
+  gmtime_r(&ft, &_tm);
+
+  if (dateContracted)
+  {
+    // "%Y%m%d%H%M%S", e.g. "20200517123400"
+    strftime(b, sizeof(buf), "%Y%m%d%H%M%S", &_tm);
+  }
+  else
+  {
+    // "%h %d %H:%M", e.g. "May 17 12:34" for file dates of the current year
+    // "%h %d  %Y"  , e.g. "May 17  2019" for file dates of any other years
+
+    // just convert both ways, select later what's to be shown
+    // buf becomes "May 17  2019May 17 12:34"
+    strftime(b, sizeof(buf), "%h %d %H:%M%h %d  %Y", &_tm);
+
+    // check for a year != year from now
+    int fileYear = _tm.tm_year;
+    time_t nowTime = time(NULL);
+    gmtime_r(&nowTime, &_tm);
+    if (fileYear == _tm.tm_year)
+    {
+      // cut off 2nd half - year variant
+      b[12] = '\0';
+    }
+    else
+    {
+      // skip 1st half - time variant
+      b += 12;
+    }
+  }
+  tmp = b;
+  return tmp;
+}
+
+// https://files.stairways.com/other/ftp-list-specs-info.txt
+void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const char* fn, long fz, time_t time, const char* user, bool writeFilename = true) {
+//	if( isDirectory ) {
+//		//			  data.print( F("+/,\t") );
+//		//			  DEBUG_PRINT(F("+/,\t"));
+//
+//		data->print( F("drwxrwsr-x\t2\t"));
+//		data->print( user );
+//		data->print( F("\t") );
+//		data->print( long( 4096 ) );
+//		data->print( F("\t") );
+//
+//		DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
+//		DEBUG_PRINT( user );
+//		DEBUG_PRINT( F("\t") );
+//
+//		DEBUG_PRINT( long( 4096 ) );
+//		DEBUG_PRINT( F("\t") );
+//
+//		data->print(makeDateTimeStrList(time));
+//		DEBUG_PRINT(makeDateTimeStrList(time));
+//
+//		data->print( F("\t") );
+//		if (writeFilename) data->println( fn );
+//
+//		DEBUG_PRINT( F("\t") );
+//		if (writeFilename) DEBUG_PRINTLN( fn );
+//
+//	} else {
+////			data.print( F("+r,s") );
+////			DEBUG_PRINT(F("+r,s"));
+//
+//		data->print( F("-rw-rw-r--\t1\t") );
+//		data->print( user );
+//		data->print( F("\t") );
+//		data->print( fz );
+//		data->print( F("\t") );
+//
+//		DEBUG_PRINT( F("-rw-rw-r--\t1\t") );
+//		DEBUG_PRINT( user );
+//		DEBUG_PRINT( F("\t") );
+//		DEBUG_PRINT( fz );
+//		DEBUG_PRINT( F("\t") );
+//
+//		data->print(makeDateTimeStrList(time));
+//		DEBUG_PRINT(makeDateTimeStrList(time));
+//
+//		data->print( F("\t") );
+//		if (writeFilename) data->println( fn );
+//
+//		DEBUG_PRINT( F("\t") );
+//		if (writeFilename) DEBUG_PRINTLN( fn );
+//	}
+//
+	generateFileLine(data, isDirectory, fn, fz, makeDateTimeStrList(time).c_str(), user, writeFilename);
+}
+#endif
+
 bool FtpServer::doList()
 {
   if( ! dataConnected())
@@ -1168,35 +1352,143 @@ bool FtpServer::doList()
 	  FTP_FILE fileDir = dir.openNextFile();
 #endif
 	  if( fileDir )
-	#endif
+#endif
 	  {
 
-		  if( dir.isDirectory()) {
-			  data.print( F("+/,\t") );
-			  DEBUG_PRINT(F("+/,\t"));
-		  } else {
-			data.print( F("+r,s") );
-			DEBUG_PRINT(F("+r,s"));
-		  }
+//		  if( fileDir.isDirectory()) {
+////			  data.print( F("+/,\t") );
+////			  DEBUG_PRINT(F("+/,\t"));
+//
+//			  data.print( F("drwxrwsr-x\t2\tuser\t") );
+//			  data.print( long( 4096 ) );
+//			  data.print( F("\t") );
+//
+//			  DEBUG_PRINT( F("drwxrwsr-x\t2\tuser\t") );
+//			  DEBUG_PRINT( long( 4096 ) );
+//			  DEBUG_PRINT( F("\t") );
+//				#if ESP8266
+//					time_t time = dir.fileTime();
+//				#elif ESP32
+//					time_t time = fileDir.getLastWrite();
+//				#else
+//					time_t time = 0;
+//				#endif
+//
+//			  data.print(makeDateTimeStrList(time));
+//			  DEBUG_PRINT(makeDateTimeStrList(time));
+//
+//
+//		  } else {
+////			data.print( F("+r,s") );
+////			DEBUG_PRINT(F("+r,s"));
+//
+//			  data.print( F("-rw-rw-r--\t1\tuser\t") );
+//			  data.print( long( fileDir.size()) );
+//			  data.print( F("\t") );
+//
+//			  DEBUG_PRINT( F("-rw-rw-r--\t1\tuser\t") );
+//			  DEBUG_PRINT( long( fileDir.size()) );
+//			  DEBUG_PRINT( F("\t") );
+//				#if ESP8266
+//					time_t time = dir.fileTime();
+//				#elif ESP32
+//					time_t time = fileDir.getLastWrite();
+//				#else
+//					time_t time = 0;
+//				#endif
+//
+//				data.print(makeDateTimeStrList(time));
+//				DEBUG_PRINT(makeDateTimeStrList(time));
+//		  }
 	#if ESP8266
-		data.print( long( dir.fileSize()) );
-		data.print( F(",\t") );
-		data.println( dir.fileName() );
+		  long fz = long( dir.fileSize());
+		  const char* fn = dir.fileName().c_str();
+//		data.print( long( dir.fileSize()) );
+//		data.print( F(",\t") );
+//		data.println( dir.fileName() );
 	#elif STORAGE_TYPE == STORAGE_SEEED_SD
-		String fn = fileDir.name();
+		  const char* fn = fileDir.name();
 		fn.remove(0, strlen(dir.name()));
 		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 		long fz = fileDir.size();
 	#else
-		data.print( long( fileDir.size()) );
-		data.print( F(",\t") );
-		data.println( fileDir.name() );
+		  long fz = long( fileDir.size());
+		  const char* fn = fileDir.name();
 
-		DEBUG_PRINT( long( fileDir.size()));
-		DEBUG_PRINT( F(",\t") );
-		DEBUG_PRINTLN( fileDir.name() );
+//		data.print( long( fileDir.size()) );
+//		data.print( F("\t") );
+//		data.println( fileDir.name() );
 
+//		DEBUG_PRINT( long( fileDir.size()));
+//		DEBUG_PRINT( F("\t") );
+//		DEBUG_PRINTLN( fileDir.name() );
 	#endif
+	#if ESP8266
+		time_t time = dir.fileTime();
+		generateFileLine(&data, dir.isDirectory(), fn, fz, time, this->user);
+	#elif ESP32
+		time_t time = fileDir.getLastWrite();
+		generateFileLine(&data, fileDir.isDirectory(), fn, fz, time, this->user);
+	#else
+		generateFileLine(&data, fileDir.isDirectory(), fn, fz, "Jan 01 00:00", this->user);
+	#endif
+//		  if( fileDir.isDirectory()) {
+////			  data.print( F("+/,\t") );
+////			  DEBUG_PRINT(F("+/,\t"));
+//
+//			  data.print( F("drwxrwsr-x\t2\tuser\t") );
+//			  data.print( long( 4096 ) );
+//			  data.print( F("\t") );
+//
+//			  DEBUG_PRINT( F("drwxrwsr-x\t2\tuser\t") );
+//			  DEBUG_PRINT( long( 4096 ) );
+//			  DEBUG_PRINT( F("\t") );
+//				#if ESP8266
+//					time_t time = dir.fileTime();
+//				#elif ESP32
+//					time_t time = fileDir.getLastWrite();
+//				#else
+//					time_t time = 0;
+//				#endif
+//
+//			  data.print(makeDateTimeStrList(time));
+//			  DEBUG_PRINT(makeDateTimeStrList(time));
+//
+//			  		data.print( F("\t") );
+//			  		data.println( fn );
+//
+//			  		DEBUG_PRINT( F("\t") );
+//			  		DEBUG_PRINTLN( fn );
+//
+//		  } else {
+////			data.print( F("+r,s") );
+////			DEBUG_PRINT(F("+r,s"));
+//
+//			  data.print( F("-rw-rw-r--\t1\tuser\t") );
+//			  data.print( fz );
+//			  data.print( F("\t") );
+//
+//			  DEBUG_PRINT( F("-rw-rw-r--\t1\tuser\t") );
+//			  DEBUG_PRINT( fz );
+//			  DEBUG_PRINT( F("\t") );
+//				#if ESP8266
+//					time_t time = dir.fileTime();
+//				#elif ESP32
+//					time_t time = fileDir.getLastWrite();
+//				#else
+//					time_t time = 0;
+//				#endif
+//
+//				data.print(makeDateTimeStrList(time));
+//				DEBUG_PRINT(makeDateTimeStrList(time));
+//
+//		  		data.print( F("\t") );
+//		  		data.println( fn );
+//
+//		  		DEBUG_PRINT( F("\t") );
+//		  		DEBUG_PRINTLN( fn );
+//
+//		  }
 
 
     nbMatch ++;
@@ -1207,68 +1499,43 @@ bool FtpServer::doList()
 	  if( fileDir )
 	  {
 
-		data.print( F("+r,s") );
-		data.print( long( fileDir.size()) );
-		data.print( F(",\t") );
-		data.println( fileDir.name() );
+//		data.print( F("+r,s") );
+//		data.print( long( fileDir.size()) );
+//		data.print( F(",\t") );
+//		data.println( fileDir.name() );
+
+		generateFileLine(&data, false, fileDir.name(), long( fileDir.size()), "Jan 01 00:00", this->user);
 
 		nbMatch ++;
 		return true;
   }
-//
-//#elif STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SD
-//	#if ESP8266 && STORAGE_TYPE != STORAGE_SD
-//	  if( dir.next())
-//	#else
-//	  File fileDir = dir.openNextFile();
-//	  if( fileDir )
-//	#endif
-//	  {
-//
-//	#if (STORAGE_TYPE == STORAGE_LITTLEFS)
-//		  if( dir.isDirectory()) {
-//			  data.print( F("+/,\t") );
-//		  } else {
-//	#endif
-//		data.print( F("+r,s") );
-//	#if ESP8266 && STORAGE_TYPE != STORAGE_SD
-//		data.print( long( dir.fileSize()) );
-//		data.print( F(",\t") );
-//		data.println( dir.fileName() );
-//	#else
-//		data.print( long( fileDir.size()) );
-//		data.print( F(",\t") );
-//		data.println( fileDir.name() );
-//	#endif
-//	#if (STORAGE_TYPE == STORAGE_LITTLEFS)
-//		  }
-//	#endif
-//
-//    nbMatch ++;
-//    return true;
-//  }
-//
 
 #elif STORAGE_TYPE == STORAGE_FATFS
   if( dir.nextFile())
   {
-    if( dir.isDir()) {
-      data.print( F("+/,\t") );
-    } else {
-    	data.print( F("+r,s") ); data.print( long( dir.fileSize()) ); data.print( F(",\t") );
-    }
-    data.println( dir.fileName() );
+//    if( dir.isDir()) {
+//      data.print( F("+/,\t") );
+//    } else {
+//    	data.print( F("+r,s") ); data.print( long( dir.fileSize()) ); data.print( F(",\t") );
+//    }
+//    data.println( dir.fileName() );
+
+	generateFileLine(&data, dir.isDir(), dir.fileName(), long( dir.fileSize()), "Jan 01 00:00", this->user);
+
     nbMatch ++;
     return true;
   }
 #else
   if( file.openNext( &dir, FTP_FILE_READ_ONLY ))
   {
-    if( file.isDir()) {
-      data.print( F("+/,\t") );
-    } else {
-    	data.print( F("+r,s") ); data.print( long( fileSize( file )) ); data.print( F(",\t") );
-    }
+//    if( file.isDir()) {
+//      data.print( F("+/,\t") );
+//    } else {
+//    	data.print( F("+r,s") ); data.print( long( fileSize( file )) ); data.print( F(",\t") );
+//    }
+
+	generateFileLine(&data, file.isDir(), "", long( fileSize( file )), "Jan 01 00:00", this->user, false);
+
     file.printName( & data );
     data.println();
     file.close();
