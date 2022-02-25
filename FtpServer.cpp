@@ -79,18 +79,11 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   if( strlen( _user ) > 0 && strlen( _user ) < FTP_CRED_SIZE ) {
     //strcpy( user, _user );
 	  this->user = _user;
-  }else{
-//	strcpy( user, FTP_USER );
-	  this->user = FTP_USER;
   }
   if( strlen( _pass ) > 0 && strlen( _pass ) < FTP_CRED_SIZE ) {
 //    strcpy( pass, _pass );
 	  this->pass = _pass;
-  }else{
-//	  strcpy( pass, FTP_PASS );
-	  this->pass = FTP_PASS;
   }
-
 //  strcpy(_welcomeMessage, welcomeMessage);
 
   this->welcomeMessage = _welcomeMessage;
@@ -124,6 +117,8 @@ void FtpServer::end()
     DEBUG_PRINTLN(F("Stop server!"));
 
     cmdStage = FTP_Init;
+    transferStage = FTP_Close;
+    dataConn = FTP_NoConn;
 }
 void FtpServer::setLocalIp(IPAddress localIp)
 {
@@ -1328,16 +1323,44 @@ bool FtpServer::doList()
 	#endif
 	  {
 
-		data.print( F("+r,s") );
-	#if ESP8266
-		data.print( long( dir.fileSize()) );
-		data.print( F(",\t") );
-		data.println( dir.fileName() );
-	#else
-		data.print( long( fileDir.size()) );
-		data.print( F(",\t") );
-		data.println( fileDir.name() );
-	#endif
+//		data.print( F("+r,s") );
+//	#if ESP8266
+//		data.print( long( dir.fileSize()) );
+//		data.print( F(",\t") );
+//		data.println( dir.fileName() );
+//	#else
+//		data.print( long( fileDir.size()) );
+//		data.print( F(",\t") );
+//		data.println( fileDir.name() );
+//	#endif
+
+
+
+#ifdef ESP8266
+	  String fn = dir.fileName();
+	  long fz = long( dir.fileSize());
+	  if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
+	  time_t time = dir.fileTime();
+	  generateFileLine(&data, false, fn.c_str(), fz, time, this->user);
+#else
+	  long fz = long( fileDir.size());
+	  const char* fnC = fileDir.name();
+	  const char* fn;
+	  if ( fnC[0] == '/' ) {
+		  fn = &fnC[1];
+	  }else{
+		  fn = fnC;
+	  }
+
+	  time_t time = fileDir.getLastWrite();
+	  generateFileLine(&data, false, fn, fz, time, this->user);
+
+#endif
+
+#ifdef ESP8266
+#else
+#endif
+
     nbMatch ++;
     return true;
   }
@@ -1407,9 +1430,13 @@ bool FtpServer::doList()
 //		data.print( F(",\t") );
 //		data.println( dir.fileName() );
 	#elif STORAGE_TYPE == STORAGE_SEEED_SD
-		  const char* fn = fileDir.name();
-		fn.remove(0, strlen(dir.name()));
-		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
+		  const char* fnC = fileDir.name();
+		  const char* fn;
+		  if ( fnC[0] == '/' ) {
+			  fn = &fnC[1];
+		  }else{
+			  fn = fnC;
+		  }
 		long fz = fileDir.size();
 	#else
 		  long fz = long( fileDir.size());

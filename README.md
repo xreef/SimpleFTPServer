@@ -10,8 +10,9 @@
  - Wio Terminal (SdFat 2, and native FAT)
 
 #### Changelog
-- 2022-02-22 Add anonymous user and implement correct RFC (#9 now work correctly with File Explorer)
-- 2022-02-01 Add workaround to start FTP server before connection, add end and setLocalIP method.
+- 2022-02-25 1.2.1 Fix anonymous user begin and fix SPIFFS wrong display
+- 2022-02-22 1.2.0 Add anonymous user and implement correct RFC (#9 now work correctly with File Explorer)
+- 2022-02-01 1.1.1 Add workaround to start FTP server before connection, add end and setLocalIP method.
 
 <!-- wp:paragraph -->
 <p>When I develop a new solution I'd like to divide the application in layer, and so I'd like focus my attention in only one aspect at time. </p>

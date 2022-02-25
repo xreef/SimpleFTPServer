@@ -398,9 +398,6 @@
 	#define DEBUG_PRINTLN(...) {}
 #endif
 
-#define FTP_USER "arduino"        // Default user'name
-#define FTP_PASS "test"           // Default password
-
 #define FTP_CMD_PORT 21           // Command port on wich server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
@@ -458,7 +455,7 @@ class FtpServer
 public:
   FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
 
-  void    begin( const char * _user = FTP_USER, const char * _pass = FTP_PASS, const char * welcomeMessage = "Welcome to Simply FTP server" );
+  void    begin( const char * _user, const char * _pass, const char * welcomeMessage = "Welcome to Simply FTP server" );
   void    begin( const char * welcomeMessage = "Welcome to Simply FTP server" );
 
   void 	  end();
