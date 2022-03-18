@@ -172,7 +172,29 @@ uint8_t FtpServer::handleFTP() {
 
 			cmdStage = FTP_Client;
 		} else if (cmdStage == FTP_Client) {    // Ftp server idle
-#ifdef ESP8266
+#if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
+//			if (client && !client.connected()) {
+//				client.stop();
+//				DEBUG_PRINTLN(F("CLIENT STOP!!"));
+//			}
+			byte status;
+			client = ftpServer.available(&status);
+			/*
+			 *   CLOSED      = 0,
+  LISTEN      = 1,
+  SYN_SENT    = 2,
+  SYN_RCVD    = 3,
+  ESTABLISHED = 4,
+  FIN_WAIT_1  = 5,
+  FIN_WAIT_2  = 6,
+  CLOSE_WAIT  = 7,
+  CLOSING     = 8,
+  LAST_ACK    = 9,
+  TIME_WAIT   = 10
+			 *
+			 */
+//			DEBUG_PRINTLN(status);
+#elif defined(ESP8266)
 		  if( ftpServer.hasClient())
 		  {
 		    client.stop();
@@ -915,14 +937,16 @@ int FtpServer::dataConnect( bool out150 )
       uint16_t count = 1000; // wait up to a second
       while( ! data.connected() && count -- > 0 )
       {
-        #ifdef ESP8266
+		#if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
+    	  	  data = dataServer.available();
+		#elif defined(ESP8266)
 			if( dataServer.hasClient())
 			{
 			  data.stop();
 			  data = dataServer.available();
 			}
         #else
-        data = dataServer.accept();
+			data = dataServer.accept();
         #endif
         delay( 1 );
       }
@@ -2151,7 +2175,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
   			return true;
   		}
   }
-#elif STORAGE_TYPE <= STORAGE_SDFAT2
+#elif STORAGE_TYPE <= STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFM
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
 		DEBUG_PRINT( path );

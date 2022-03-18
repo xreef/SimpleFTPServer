@@ -17,8 +17,10 @@
 #ifndef FTP_SERVER_CONFIG_H
 #define FTP_SERVER_CONFIG_H
 
+#define FTP_SERVER_VERSION "2022-03-11"
+
 // Uncomment to enable printing out nice debug messages.
- #define FTP_SERVER_DEBUG
+// #define FTP_SERVER_DEBUG
 
 // Define where debug output will be printed.
 #define DEBUG_PRINTER Serial
@@ -34,15 +36,18 @@
 #define STORAGE_FFAT  8 // ESP32 FFAT
 
 #define NETWORK_ESP8266_ASYNC (0)
-#define NETWORK_ESP8266 (1)
-// && (defined(ESP8266) && ARDUINO_ESP8266_MAJOR<3)
-#define NETWORK_ESP8266_242 (6)
-#define NETWORK_W5100 (2)
-#define NETWORK_ENC28J60 (3)
-#define NETWORK_ESP32 (4)
-#define NETWORK_ESP32_ETH (5)
-#define NETWORK_WiFiNINA (7)
-#define NETWORK_SEEED_RTL8720DN (8)
+#define NETWORK_ESP8266 (1) 	// Standard ESP8266WiFi
+#define NETWORK_ESP8266_242 (6) // ESP8266WiFi before 2.4.2 core
+#define NETWORK_W5100 (2)		// Standard Arduino Ethernet library
+#define NETWORK_ENC28J60 (3) 	// UIPEthernet library
+#define NETWORK_ESP32 (4) 		// Standard WiFi library
+#define NETWORK_ESP32_ETH (5)	// Standard ETH library
+#define NETWORK_WiFiNINA (7)	// Standard WiFiNINA library
+#define NETWORK_SEEED_RTL8720DN (8) // Standard SEED WiFi library
+//#define NETWORK_ETHERNET_LARGE (9)
+#define NETWORK_ETHERNET_ENC (10)	// EthernetENC library (evolution of UIPEthernet
+//#define NETWORK_ETHERNET_STM (11)
+#define NETWORK_UIPETHERNET (12)	// UIPEthernet library same of NETWORK_ENC28J60
 
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266 	NETWORK_ESP8266
