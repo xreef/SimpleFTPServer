@@ -20,6 +20,7 @@
  *   MDTM, MFMT
  *   FEAT, SIZE
  *   SITE FREE
+ *   HELP
  *
  * Tested with those clients:
  *   under Windows:
@@ -660,6 +661,23 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "NOOP" )) {
     client.println(F("200 Zzz...") );
+  }
+  //
+  //  HELP
+  //
+  else if( CommandIs( "HELP" )) {
+    client.println(F("200 Commands implemented:") );
+	client.println(F("      USER, PASS, AUTH (AUTH only return 'not implemented' code)") );
+	client.println(F("      CDUP, CWD, PWD, QUIT, NOOP") );
+	client.println(F("      MODE, PASV, PORT, STRU, TYPE") );
+	client.println(F("      ABOR, DELE, LIST, NLST, MLST, MLSD") );
+	client.println(F("      APPE, RETR, STOR") );
+	client.println(F("      MKD,  RMD") );
+	client.println(F("      RNTO, RNFR") );
+	client.println(F("      MDTM, MFMT") );
+	client.println(F("      FEAT, SIZE") );
+	client.println(F("      SITE FREE") );
+	client.println(F("      HELP") );
   }
   //
   //  RETR - Retrieve
@@ -2108,7 +2126,7 @@ char * FtpServer::makeDateTimeStr( char * tstr, uint16_t date, uint16_t time )
 }
 
 
-uint16_t FtpServer::fileSize( FTP_FILE file ) {
+uint32_t FtpServer::fileSize( FTP_FILE file ) {
 #if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD)
 	return file.size();
 #else
@@ -2175,7 +2193,7 @@ uint16_t FtpServer::fileSize( FTP_FILE file ) {
   			return true;
   		}
   }
-#elif STORAGE_TYPE <= STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFM
+#elif STORAGE_TYPE <= STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFM || (STORAGE_TYPE == STORAGE_SD && ARDUINO_ARCH_SAMD)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
 		DEBUG_PRINT( path );
