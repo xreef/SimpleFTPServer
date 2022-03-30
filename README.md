@@ -6,8 +6,9 @@
 #### Simple FTP Server for 
  - esp8266 (Flash: SPIFFs, LittleFS. SD: SD, SdFat 2)
  - esp32 (SPIFFS, LITTLEFS, FFAT, SD: SD, SdFat)
+ - stm32 (SdFat, SPI flash)
  - Arduino (SD with 8.3 file format, SD: SD, SdFat 2)
- - Wio Terminal (SdFat 2, and native FAT)
+ - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
 - 2022-03-30 2.0.0 Complete support for STM32 with SD and SPI Flash minor bux fix and HELP command support
