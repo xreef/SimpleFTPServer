@@ -55,7 +55,7 @@
 // esp32 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
-	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SPIFFS
+	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_FFAT
 #endif
 // Standard AVR Arduino configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
@@ -77,6 +77,8 @@
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD 		NETWORK_WiFiNINA
 	#define DEFAULT_STORAGE_TYPE_SAMD 					STORAGE_SD
 #endif
+
+#define UTF8_SUPPORT
 
 //#define SD_CS_PIN 4
 // Disconnect client after 5 minutes of inactivity (expressed in seconds)

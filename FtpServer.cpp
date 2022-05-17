@@ -383,6 +383,9 @@ bool FtpServer::processCommand()
     client.println(F(" MLSD") );
     client.println(F(" MDTM") );
     client.println(F(" MFMT") );
+#ifdef UTF8_SUPPORT
+	client.println(F(" UTF8") );
+#endif
     client.println(F(" SIZE") );
     client.println(F(" SITE FREE") );
     client.println(F("211 End.") );
@@ -663,6 +666,20 @@ bool FtpServer::processCommand()
     client.println(F("200 Zzz...") );
   }
   //
+#ifdef UTF8_SUPPORT
+  //  OPTS
+  //
+  else if( CommandIs( "OPTS" )) {
+    if( ParameterIs( "UTF8 ON" ) || ParameterIs( "utf8 on" )) {
+      client.println(F("200 OK, UTF8 ON") );
+      DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
+    } else {
+      client.println(F("504 Unknow OPTS") );
+      DEBUG_PRINTLN(F("504 Unknow OPTS") );
+    }
+  }
+  //
+#endif
   //  HELP
   //
   else if( CommandIs( "HELP" )) {
@@ -1051,35 +1068,6 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 
 	  openD = dir.isDirectory();
 
-//#ifdef FTP_ADDITIONAL_DEBUG
-//	    DEBUG_PRINT("Listing directory: ");
-//	    DEBUG_PRINTLN(cwdName);
-//
-//	    if (!dir) {
-//	        DEBUG_PRINTLN("Failed to open directory");
-//	    }
-//	    if (!dir.isDirectory()) {
-//	        DEBUG_PRINTLN("Not a directory");
-//	    }
-//
-//	    File file = dir.openNextFile();
-//	    while (file) {
-//	        if (file.isDirectory()) {
-//	            DEBUG_PRINT("  DIR : ");
-//	            DEBUG_PRINTLN(file.name());
-//	        } else {
-//	            DEBUG_PRINT("  FILE: ");
-//	            DEBUG_PRINT(file.name());
-//	            DEBUG_PRINT("  SIZE: ");
-//	            DEBUG_PRINTLN(file.size());
-//	        }
-//	        file = dir.openNextFile();
-//	    }
-//
-//	    dir.rewindDirectory();
-//
-//#endif
-
 	  if( ! openD  ) {
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
@@ -1291,58 +1279,6 @@ String makeDateTimeStrList(time_t ft, bool dateContracted = false)
 
 // https://files.stairways.com/other/ftp-list-specs-info.txt
 void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const char* fn, long fz, time_t time, const char* user, bool writeFilename = true) {
-//	if( isDirectory ) {
-//		//			  data.print( F("+/,\t") );
-//		//			  DEBUG_PRINT(F("+/,\t"));
-//
-//		data->print( F("drwxrwsr-x\t2\t"));
-//		data->print( user );
-//		data->print( F("\t") );
-//		data->print( long( 4096 ) );
-//		data->print( F("\t") );
-//
-//		DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
-//		DEBUG_PRINT( user );
-//		DEBUG_PRINT( F("\t") );
-//
-//		DEBUG_PRINT( long( 4096 ) );
-//		DEBUG_PRINT( F("\t") );
-//
-//		data->print(makeDateTimeStrList(time));
-//		DEBUG_PRINT(makeDateTimeStrList(time));
-//
-//		data->print( F("\t") );
-//		if (writeFilename) data->println( fn );
-//
-//		DEBUG_PRINT( F("\t") );
-//		if (writeFilename) DEBUG_PRINTLN( fn );
-//
-//	} else {
-////			data.print( F("+r,s") );
-////			DEBUG_PRINT(F("+r,s"));
-//
-//		data->print( F("-rw-rw-r--\t1\t") );
-//		data->print( user );
-//		data->print( F("\t") );
-//		data->print( fz );
-//		data->print( F("\t") );
-//
-//		DEBUG_PRINT( F("-rw-rw-r--\t1\t") );
-//		DEBUG_PRINT( user );
-//		DEBUG_PRINT( F("\t") );
-//		DEBUG_PRINT( fz );
-//		DEBUG_PRINT( F("\t") );
-//
-//		data->print(makeDateTimeStrList(time));
-//		DEBUG_PRINT(makeDateTimeStrList(time));
-//
-//		data->print( F("\t") );
-//		if (writeFilename) data->println( fn );
-//
-//		DEBUG_PRINT( F("\t") );
-//		if (writeFilename) DEBUG_PRINTLN( fn );
-//	}
-//
 	generateFileLine(data, isDirectory, fn, fz, makeDateTimeStrList(time).c_str(), user, writeFilename);
 }
 #endif
@@ -1420,54 +1356,12 @@ bool FtpServer::doList()
 #endif
 	  {
 
-//		  if( fileDir.isDirectory()) {
-////			  data.print( F("+/,\t") );
-////			  DEBUG_PRINT(F("+/,\t"));
-//
-//			  data.print( F("drwxrwsr-x\t2\tuser\t") );
-//			  data.print( long( 4096 ) );
-//			  data.print( F("\t") );
-//
-//			  DEBUG_PRINT( F("drwxrwsr-x\t2\tuser\t") );
-//			  DEBUG_PRINT( long( 4096 ) );
-//			  DEBUG_PRINT( F("\t") );
-//				#if ESP8266
-//					time_t time = dir.fileTime();
-//				#elif ESP32
-//					time_t time = fileDir.getLastWrite();
-//				#else
-//					time_t time = 0;
-//				#endif
-//
-//			  data.print(makeDateTimeStrList(time));
-//			  DEBUG_PRINT(makeDateTimeStrList(time));
-//
-//
-//		  } else {
-////			data.print( F("+r,s") );
-////			DEBUG_PRINT(F("+r,s"));
-//
-//			  data.print( F("-rw-rw-r--\t1\tuser\t") );
-//			  data.print( long( fileDir.size()) );
-//			  data.print( F("\t") );
-//
-//			  DEBUG_PRINT( F("-rw-rw-r--\t1\tuser\t") );
-//			  DEBUG_PRINT( long( fileDir.size()) );
-//			  DEBUG_PRINT( F("\t") );
-//				#if ESP8266
-//					time_t time = dir.fileTime();
-//				#elif ESP32
-//					time_t time = fileDir.getLastWrite();
-//				#else
-//					time_t time = 0;
-//				#endif
-//
-//				data.print(makeDateTimeStrList(time));
-//				DEBUG_PRINT(makeDateTimeStrList(time));
-//		  }
 	#if ESP8266
 		  long fz = long( dir.fileSize());
-		  const char* fn = dir.fileName().c_str();
+//		  const char* fn = dir.fileName().c_str();
+		  String aza = dir.fileName();
+		  const char* fn = aza.c_str(); Serial.printf("test %s ", fn);
+
 //		data.print( long( dir.fileSize()) );
 //		data.print( F(",\t") );
 //		data.println( dir.fileName() );
@@ -1501,65 +1395,6 @@ bool FtpServer::doList()
 	#else
 		generateFileLine(&data, fileDir.isDirectory(), fn, fz, "Jan 01 00:00", this->user);
 	#endif
-//		  if( fileDir.isDirectory()) {
-////			  data.print( F("+/,\t") );
-////			  DEBUG_PRINT(F("+/,\t"));
-//
-//			  data.print( F("drwxrwsr-x\t2\tuser\t") );
-//			  data.print( long( 4096 ) );
-//			  data.print( F("\t") );
-//
-//			  DEBUG_PRINT( F("drwxrwsr-x\t2\tuser\t") );
-//			  DEBUG_PRINT( long( 4096 ) );
-//			  DEBUG_PRINT( F("\t") );
-//				#if ESP8266
-//					time_t time = dir.fileTime();
-//				#elif ESP32
-//					time_t time = fileDir.getLastWrite();
-//				#else
-//					time_t time = 0;
-//				#endif
-//
-//			  data.print(makeDateTimeStrList(time));
-//			  DEBUG_PRINT(makeDateTimeStrList(time));
-//
-//			  		data.print( F("\t") );
-//			  		data.println( fn );
-//
-//			  		DEBUG_PRINT( F("\t") );
-//			  		DEBUG_PRINTLN( fn );
-//
-//		  } else {
-////			data.print( F("+r,s") );
-////			DEBUG_PRINT(F("+r,s"));
-//
-//			  data.print( F("-rw-rw-r--\t1\tuser\t") );
-//			  data.print( fz );
-//			  data.print( F("\t") );
-//
-//			  DEBUG_PRINT( F("-rw-rw-r--\t1\tuser\t") );
-//			  DEBUG_PRINT( fz );
-//			  DEBUG_PRINT( F("\t") );
-//				#if ESP8266
-//					time_t time = dir.fileTime();
-//				#elif ESP32
-//					time_t time = fileDir.getLastWrite();
-//				#else
-//					time_t time = 0;
-//				#endif
-//
-//				data.print(makeDateTimeStrList(time));
-//				DEBUG_PRINT(makeDateTimeStrList(time));
-//
-//		  		data.print( F("\t") );
-//		  		data.println( fn );
-//
-//		  		DEBUG_PRINT( F("\t") );
-//		  		DEBUG_PRINTLN( fn );
-//
-//		  }
-
-
     nbMatch ++;
     return true;
   }
@@ -1982,6 +1817,23 @@ bool FtpServer::haveParameter()
   return false;  
 }
 
+int utf8_strlen(const String& str)
+{
+    int c,i,ix,q;
+    for (q=0, i=0, ix=str.length(); i < ix; i++, q++)
+    {
+        c = (unsigned char) str[i];
+        if      (c>=0   && c<=127) i+=0;
+        else if ((c & 0xE0) == 0xC0) i+=1;
+        else if ((c & 0xF0) == 0xE0) i+=2;
+        else if ((c & 0xF8) == 0xF0) i+=3;
+        //else if (($c & 0xFC) == 0xF8) i+=4; // 111110bb //byte 5, unnecessary in 4 byte UTF-8
+        //else if (($c & 0xFE) == 0xFC) i+=5; // 1111110b //byte 6, unnecessary in 4 byte UTF-8
+        else return 0;//invalid utf8
+    }
+    return q;
+}
+
 // Make complete path/name from cwdName and param
 //
 // 3 possible cases: param can be absolute path, relative path or only the name
@@ -2022,12 +1874,27 @@ bool FtpServer::makePath( char * fullName, char * param )
     client.println(F("500 Command line too long"));
     return false;
   }
-  for( uint8_t i = 0; i < strlen( fullName ); i ++ )
+#ifdef UTF8_SUPPORT
+//  for( uint8_t i = 0; i < utf8_strlen( fullName ); i ++ ) {
+//
+//  }
+  if (utf8_strlen(fullName)>=FILENAME_LENGTH) {
+      client.println(F("553 File name not allowed. Too long.") );
+      return false;
+  }
+#else
+  for( uint8_t i = 0; i < strlen( fullName ); i ++ ) {
     if( ! legalChar( fullName[i]))
     {
       client.println(F("553 File name not allowed") );
       return false;
     }
+  }
+  if (strlen(fullName)>=FILENAME_LENGTH) {
+      client.println(F("553 File name not allowed. Too long.") );
+      return false;
+  }
+#endif
   return true;
 }
 
@@ -2245,11 +2112,10 @@ bool FtpServer::isDir( char * path )
 	  bool res;
 	  dir = STORAGE_MANAGER.openDir( path );
 
-	  return true;
-//	  res = dir.isDirectory();
-//	  return res;
+	  res = true;
+  	  return res;
 
-#elif STORAGE_TYPE == STORAGE_SPIFFS
+	  #elif STORAGE_TYPE == STORAGE_SPIFFS
 	if (strcmp(path, "/") == 0)  { return true; }
 	return false; // no directory support
 #elif STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))

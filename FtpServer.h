@@ -252,7 +252,6 @@
 
 		#endif
 
-
 #if ESP8266
 	#define FTP_FILE_READ "r"
 	#define FTP_FILE_READ_ONLY "r"
@@ -267,7 +266,9 @@
 	#define FTP_FILE_WRITE_CREATE "w"
 #endif
 
-		#define STORAGE_MANAGER SPIFFS
+	#define STORAGE_MANAGER SPIFFS
+
+	#define FILENAME_LENGTH 32
 #elif(STORAGE_TYPE == STORAGE_FFAT)
 		#include "FS.h"
 		#include "FFat.h"
@@ -283,6 +284,7 @@
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
 
+	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_LITTLEFS)
 	#if ESP8266
 		#include "LittleFS.h"
@@ -313,6 +315,7 @@
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
 	#endif
+	#define FILENAME_LENGTH 32
 #elif(STORAGE_TYPE == STORAGE_SD)
 	#include <SPI.h>
 	#include <SD.h>
@@ -333,6 +336,7 @@
 #endif
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
+	#define FILENAME_LENGTH 32
 #elif(STORAGE_TYPE == STORAGE_SEEED_SD)
 	#include <Seeed_FS.h>
 	#define STORAGE_MANAGER SD
@@ -353,6 +357,8 @@
 	#define FTP_FILE_WRITE_APPEND FILE_APPEND
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
+	#define FILENAME_LENGTH 32
+
 #elif (STORAGE_TYPE == STORAGE_SDFAT1)
 	#include <SdFat.h>
 	#include <sdios.h>
@@ -367,6 +373,8 @@
 	#define FTP_FILE_READ_WRITE O_RDWR
 	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
 	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
+	#define FILENAME_LENGTH 255
+
 #elif (STORAGE_TYPE == STORAGE_SDFAT2)
 	#include <SdFat.h>
 	#include <sdios.h>
@@ -381,6 +389,7 @@
 	#define FTP_FILE_READ_WRITE O_RDWR
 	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
 	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
+	#define FILENAME_LENGTH 255
 #elif (STORAGE_TYPE == STORAGE_SPIFM)
 	#include <SdFat.h>
 	#include <Adafruit_SPIFlash.h>
@@ -396,7 +405,7 @@
 	#define FTP_FILE_READ_WRITE FILE_WRITE
 	#define FTP_FILE_WRITE_APPEND FILE_WRITE
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
-
+	#define FILENAME_LENGTH 255
 #elif (STORAGE_TYPE == STORAGE_FATFS)
 	#include <FatFs.h>
 	#include <sdios.h>
@@ -416,6 +425,7 @@
 	#define FTP_FILE_READ_WRITE O_RDWR
 	#define FTP_FILE_WRITE_APPEND O_WRITE | O_APPEND
 	#define FTP_FILE_WRITE_CREATE O_WRITE | O_CREAT
+	#define FILENAME_LENGTH 255
 #endif
 
 //#ifdef FTP_CLIENT_NETWORK_SSL_CLASS
