@@ -1360,7 +1360,7 @@ bool FtpServer::doList()
 		  long fz = long( dir.fileSize());
 //		  const char* fn = dir.fileName().c_str();
 		  String aza = dir.fileName();
-		  const char* fn = aza.c_str(); Serial.printf("test %s ", fn);
+		  const char* fn = aza.c_str(); //Serial.printf("test %s ", fn);
 
 //		data.print( long( dir.fileSize()) );
 //		data.print( F(",\t") );
