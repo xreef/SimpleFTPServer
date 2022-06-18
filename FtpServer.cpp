@@ -1408,7 +1408,10 @@ bool FtpServer::doList()
 //		data.print( F(",\t") );
 //		data.println( fileDir.name() );
 
-		generateFileLine(&data, false, fileDir.name(), long( fileDir.size()), "Jan 01 00:00", this->user);
+		String fn = fileDir.name();
+		fn.remove(0, fn.lastIndexOf("/")+1);
+
+		generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00", this->user);
 
 		nbMatch ++;
 		return true;
