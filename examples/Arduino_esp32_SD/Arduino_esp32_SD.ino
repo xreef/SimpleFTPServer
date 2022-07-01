@@ -78,7 +78,7 @@ void setup(void){
   /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
 
   /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
-  SPI.begin(14, 2, 15, 13); //SCK, MISO, MOSI,SS
+  SPI.begin(14, 12, 15, 13); //SCK, MISO, MOSI,SS
 
   if (SD.begin(13, SPI)) {
       Serial.println("SD opened!");
