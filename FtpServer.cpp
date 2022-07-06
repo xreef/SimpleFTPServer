@@ -282,7 +282,7 @@ uint8_t FtpServer::handleFTP() {
 
 void FtpServer::clientConnected()
 {
-	DEBUG_PRINTLN( F(" Client connected!") );
+  DEBUG_PRINTLN( F(" Client connected!") );
   client.print(F("220---")); client.print(welcomeMessage); client.println(F(" ---"));
   client.println(F("220---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
@@ -1409,7 +1409,7 @@ bool FtpServer::doList()
 //		data.println( fileDir.name() );
 
 		String fn = fileDir.name();
-		fn.remove(0, fn.lastIndexOf("/")+1);
+		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 
 		generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00", this->user);
 
@@ -1427,7 +1427,10 @@ bool FtpServer::doList()
 //    }
 //    data.println( dir.fileName() );
 
-	generateFileLine(&data, dir.isDir(), dir.fileName(), long( dir.fileSize()), "Jan 01 00:00", this->user);
+		String fn = dir.fileName();
+		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
+
+	generateFileLine(&data, dir.isDir(), fn.c_str(), long( dir.fileSize()), "Jan 01 00:00", this->user);
 
     nbMatch ++;
     return true;
