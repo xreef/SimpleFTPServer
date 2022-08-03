@@ -1,3 +1,19 @@
+/**************************************************************************
+ * This is a fork of the SimpleFTPServer on github
+ * found at https://github.com/xreef/SimpleFTPServer.
+ *
+ * My version can be found as "MultiFTPServer"
+ * at https://github.com/yasheena/MultiFTPServer.
+ * 
+ * I extended the code to enable more than one concurrent FTP session.
+ * So i.e. it is possible to use WinSCP to edit files and use background
+ * transfers (transfer queue).
+ * 
+ * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
+ * for two concurrent FTP connections. 
+ * 
+ **************************************************************************/
+
 /*
  * FtpServer Arduino, esp8266 and esp32 library for Ftp Server
  * Derived form Jean-Michel Gallego version
@@ -439,9 +455,11 @@
 #ifdef FTP_SERVER_DEBUG
 	#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
 	#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+	#define DEBUG_IDX { DEBUG_PRINTER.printf("(%d) ", idx); }
 #else
 	#define DEBUG_PRINT(...) {}
 	#define DEBUG_PRINTLN(...) {}
+	#define DEBUG_IDX {}
 #endif
 
 #define FTP_CMD_PORT 21           // Command port on wich server is listening
@@ -507,7 +525,7 @@ public:
   void 	  end();
   void 	  setLocalIp(IPAddress localIp);
   void    credentials( const char * _user, const char * _pass );
-  uint8_t handleFTP();
+  void	  handleFTP();
 
 	void setCallback(void (*_callbackParam)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) )
 	{
@@ -520,6 +538,7 @@ public:
 	}
 
 private:
+  void	  _handleFTP();
   void (*_callback)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){};
   void (*_transferCallback)(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){};
 
@@ -671,10 +690,10 @@ private:
 #endif
 	}
 
-  IPAddress   localIp;                // IP address of server as seen by clients
+  static IPAddress   localIp;                // IP address of server as seen by clients
   IPAddress   dataIp;                 // IP address of client for data
-  FTP_SERVER_NETWORK_SERVER_CLASS  ftpServer;
-  FTP_SERVER_NETWORK_SERVER_CLASS  dataServer;
+  static FTP_SERVER_NETWORK_SERVER_CLASS *  ftpServer;
+  static FTP_SERVER_NETWORK_SERVER_CLASS *  dataServer;
 
 
   FTP_CLIENT_NETWORK_CLASS  client;
@@ -687,22 +706,22 @@ private:
   ftpTransfer transferStage;          // stage of data connexion
   ftpDataConn dataConn;               // type of data connexion
 
-  bool anonymousConnection = false;
+  static bool anonymousConnection;
 
   uint8_t  __attribute__((aligned(4))) // need to be aligned to 32bit for Esp8266 SPIClass::transferBytes()
            buf[ FTP_BUF_SIZE ];       // data buffer for transfers
   char     cmdLine[ FTP_CMD_SIZE ];   // where to store incoming char from client
   char     cwdName[ FTP_CWD_SIZE ];   // name of current directory
   char     rnfrName[ FTP_CWD_SIZE ];  // name of file for RNFR command
-  const char *   user;     // user name
-  const char *   pass;     // password
+  static const char *   user;     // user name
+  static const char *   pass;     // password
   char     command[ 5 ];              // command sent by client
   bool     rnfrCmd;                   // previous command was RNFR
   char *   parameter;                 // point to begin of parameters sent by client
-  const char *   welcomeMessage;
-  uint16_t cmdPort,
-           pasvPort,
-           dataPort;
+  static const char *   welcomeMessage;
+  static uint16_t cmdPort;
+  static uint16_t pasvPort;
+  uint16_t dataPort;
   uint16_t iCL;                       // pointer to cmdLine next incoming char
   uint16_t nbMatch;
 
@@ -710,6 +729,9 @@ private:
            millisEndConnection,       //
            millisBeginTrans,          // store time of beginning of a transaction
            bytesTransfered;           //
+
+  static FtpServer* sessions[FTP_MAX_SESSIONS];	// concurrently running ftp servers
+  uint8_t idx;                                  // index of this object in the sessions list
 };
 
 #endif // FTP_SERVER_H
