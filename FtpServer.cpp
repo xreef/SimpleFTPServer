@@ -10,7 +10,11 @@
  * transfers (transfer queue).
  * 
  * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
- * for two concurrent FTP connections. 
+ * for two concurrent FTP connections. But you can also use another value
+ * by using the 3rd parameter of the FtpServer constructor, which I added
+ * in MultiFTPServer (compared to SimpleFTPServer). A single new method
+ * added for the MultiFTPServer is getMaxSessions() to get the actual
+ * number of concurrently useable FTP sessions.
  * 
  **************************************************************************/
 
@@ -73,9 +77,10 @@ const char * FtpServer::pass;
 const char * FtpServer::welcomeMessage;
 uint16_t FtpServer::cmdPort;
 uint16_t FtpServer::pasvPort;
-FtpServer* FtpServer::sessions[FTP_MAX_SESSIONS] = {};
+uint8_t FtpServer::maxSessions = 0;
+FtpServer** FtpServer::sessions = NULL;
 
-FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
+FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort, uint8_t _maxSessions )
 {
   millisDelay = 0;
   nbMatch = 0;
@@ -83,19 +88,26 @@ FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
 
   iniVariables();
 
-  if (!!FtpServer::sessions[0]) {
+  if (FtpServer::maxSessions > 0) {
     return;
   }
-
+  FtpServer::sessions = (FtpServer**) malloc(_maxSessions * sizeof(FtpServer*));
+  if (FtpServer::sessions == NULL) {
+    return;
+  }
+  
   FtpServer::cmdPort = _cmdPort;
   FtpServer::pasvPort = _pasvPort;
   FtpServer::ftpServer = new FTP_SERVER_NETWORK_SERVER_CLASS(_cmdPort);
   FtpServer::dataServer = new FTP_SERVER_NETWORK_SERVER_CLASS(_pasvPort);
   FtpServer::sessions[0] = this;
   idx = 0;
-  for (uint8_t i = 1; i < FTP_MAX_SESSIONS; i++) {
+  FtpServer::maxSessions = 1;
+  for (uint8_t i = 1; i < _maxSessions; i++) {
     FtpServer::sessions[i] = new FtpServer(_cmdPort, _pasvPort);
+    if (FtpServer::sessions[i] == nullptr) break;
     FtpServer::sessions[i]->idx = i;
+    FtpServer::maxSessions = i + 1;
   }
 }
 
@@ -131,7 +143,7 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   FtpServer::dataServer->setNoDelay( true );
 #endif
 
-  for (uint8_t i = 0; i < FTP_MAX_SESSIONS; i++) {
+  for (uint8_t i = 0; i < FtpServer::maxSessions; i++) {
     FtpServer* that = FtpServer::sessions[i];
     that->millisDelay = 0;
     that->cmdStage = FTP_Stop;
@@ -146,7 +158,7 @@ void FtpServer::begin( const char * _welcomeMessage ) {
 
 void FtpServer::end()
 {
-  for (uint8_t i = 0; i < FTP_MAX_SESSIONS; i++) {
+  for (uint8_t i = 0; i < FtpServer::maxSessions; i++) {
     FtpServer* that = FtpServer::sessions[i];
     if(that->client.connected()) {
       that->disconnectClient();
@@ -194,8 +206,12 @@ void FtpServer::iniVariables()
   transferStage = FTP_Close;
 }
 
+uint8_t FtpServer::getMaxSessions() {
+  return FtpServer::maxSessions;
+}
+
 void FtpServer::handleFTP() {
-  for (uint8_t i = 0; i < FTP_MAX_SESSIONS; i++) {
+  for (uint8_t i = 0; i < FtpServer::maxSessions; i++) {
     FtpServer::sessions[i]->_handleFTP();
   }
 }

@@ -10,7 +10,11 @@
  * transfers (transfer queue).
  * 
  * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
- * for two concurrent FTP connections. 
+ * for two concurrent FTP connections. But you can also use another value
+ * by using the 3rd parameter of the FtpServer constructor, which I added
+ * in MultiFTPServer (compared to SimpleFTPServer). A single new method
+ * added for the MultiFTPServer is getMaxSessions() to get the actual
+ * number of concurrently useable FTP sessions.
  * 
  **************************************************************************/
 
@@ -36,7 +40,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.2 (2022-07-06)"
+#define FTP_SERVER_VERSION "2.1.2 (2022-08-04) Multi"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -517,7 +521,7 @@ enum FtpTransferOperation {
 class FtpServer
 {
 public:
-  FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
+  FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV, uint8_t _maxSessions = FTP_MAX_SESSIONS );
 
   void    begin( const char * _user, const char * _pass, const char * welcomeMessage = "Welcome to Simply FTP server" );
   void    begin( const char * welcomeMessage = "Welcome to Simply FTP server" );
@@ -526,6 +530,7 @@ public:
   void 	  setLocalIp(IPAddress localIp);
   void    credentials( const char * _user, const char * _pass );
   void	  handleFTP();
+  uint8_t getMaxSessions();
 
 	void setCallback(void (*_callbackParam)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) )
 	{
@@ -730,8 +735,9 @@ private:
            millisBeginTrans,          // store time of beginning of a transaction
            bytesTransfered;           //
 
-  static FtpServer* sessions[FTP_MAX_SESSIONS];	// concurrently running ftp servers
-  uint8_t idx;                                  // index of this object in the sessions list
+  static uint8_t maxSessions;         // maximum possible ftp sessions
+  static FtpServer** sessions;        // concurrently running ftp servers
+  uint8_t idx;                        // index of this object in the sessions list
 };
 
 #endif // FTP_SERVER_H

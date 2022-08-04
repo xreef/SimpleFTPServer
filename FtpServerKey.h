@@ -10,7 +10,11 @@
  * transfers (transfer queue).
  * 
  * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
- * for two concurrent FTP connections. 
+ * for two concurrent FTP connections. But you can also use another value
+ * by using the 3rd parameter of the FtpServer constructor, which I added
+ * in MultiFTPServer (compared to SimpleFTPServer). A single new method
+ * added for the MultiFTPServer is getMaxSessions() to get the actual
+ * number of concurrently useable FTP sessions.
  * 
  **************************************************************************/
 
