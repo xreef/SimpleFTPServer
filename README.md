@@ -1,3 +1,13 @@
+# MultiFTPServer
+
+This is a fork of the SimpleFTPServer on github found at https://github.com/xreef/SimpleFTPServer.
+
+I extended the code to enable more than one concurrent FTP session. So i.e. it is possible to use WinSCP to edit files and use background transfers (transfer queue).
+
+On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2 for two concurrent FTP connections. But you can also use another value by using the 3rd parameter of the FtpServer constructor, which I added in MultiFTPServer (compared to SimpleFTPServer). A single new method added for the MultiFTPServer is getMaxSessions() to get the actual number of concurrently useable FTP sessions. 
+
+The following text is the original description of the SimpleFTPServer.
+
 # SimpleFTPServer
 
 [Instruction on FTP server on esp8266 and esp32](https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32)
