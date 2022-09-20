@@ -117,6 +117,10 @@ void FtpServer::end()
 
     DEBUG_PRINTLN(F("Stop server!"));
 
+    if (FtpServer::_callback) {
+  	  FtpServer::_callback(FTP_DISCONNECT, free(), capacity());
+    }
+
     cmdStage = FTP_Init;
     transferStage = FTP_Close;
     dataConn = FTP_NoConn;
@@ -224,6 +228,10 @@ uint8_t FtpServer::handleFTP() {
 			else
 				millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
 		} else if (!client.connected()) {
+			if (FtpServer::_callback) {
+			  FtpServer::_callback(FTP_DISCONNECT, free(), capacity());
+			}
+
 			cmdStage = FTP_Init;
 		}
 		if (transferStage == FTP_Retrieve)   // Retrieve data
@@ -498,6 +506,22 @@ bool FtpServer::processCommand()
     } else {
       dataIp = localIp;
     }
+    DEBUG_PRINT( F(" IP: ") );
+    DEBUG_PRINT( int( dataIp[0]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[1]) ); DEBUG_PRINT( F(".") );
+    DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINTLN( int( dataIp[3]) );
+
+    DEBUG_PRINT( F(" IP 0.0.0.0: ") );
+    DEBUG_PRINT(dataIp.toString());
+
+#if (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_ASYNC) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP32) || 	(FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_WiFiNINA)  || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN)
+    if (dataIp.toString() ==  F("0.0.0.0")) {
+    	dataIp = NET_CLASS.softAPIP();
+    }
+#endif
+    DEBUG_PRINT( F(" Soft IP: ") );
+	DEBUG_PRINT( int( dataIp[0]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[1]) ); DEBUG_PRINT( F(".") );
+	DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINTLN( int( dataIp[3]) );
+
     dataPort = pasvPort;
     DEBUG_PRINTLN( F(" Connection management set to passive") );
     DEBUG_PRINT( F(" Listening at ") );
@@ -1031,7 +1055,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
   if( ! openD ) {
     client.print( F("550 Can't open directory ") ); client.println( cwdName );
   }
-#elif STORAGE_TYPE == STORAGE_SD
+#elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
   if( cwdName == 0 ) {
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
@@ -1398,7 +1422,7 @@ bool FtpServer::doList()
     nbMatch ++;
     return true;
   }
-#elif STORAGE_TYPE == STORAGE_SD
+#elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
 	  FTP_FILE fileDir = dir.openNextFile();
 	  if( fileDir )
 	  {
@@ -1604,7 +1628,7 @@ bool FtpServer::doMlsd()
 		return true;
 	  }
 
-#elif STORAGE_TYPE == STORAGE_SD
+#elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
 	  DEBUG_PRINTLN("DIR MLSD ");
 	  File fileDir = dir.openNextFile();
 	  if( fileDir )
@@ -1840,6 +1864,62 @@ int utf8_strlen(const String& str)
     return q;
 }
 
+//// ****** UTF8-Decoder: convert UTF8-string to extended ASCII *******
+//static byte c1;  // Last character buffer
+//
+//// Convert a single Character from UTF8 to Extended ASCII
+//// Return "0" if a byte has to be ignored
+//byte utf8ascii(byte ascii) {
+//    if ( ascii<128 )   // Standard ASCII-set 0..0x7F handling
+//    {   c1=0;
+//        return( ascii );
+//    }
+//
+//    // get previous input
+//    byte last = c1;   // get last char
+//    c1=ascii;         // remember actual character
+//
+//    switch (last)     // conversion depending on first UTF8-character
+//    {   case 0xC2: return  (ascii);  break;
+//        case 0xC3: return  (ascii | 0xC0);  break;
+//        case 0x82: if(ascii==0xAC) return(0x80);       // special case Euro-symbol
+//    }
+//
+//    return  (0);                                     // otherwise: return zero, if character has to be ignored
+//}
+//
+//// convert String object from UTF8 String to Extended ASCII
+//String utf8ascii(String s)
+//{
+//        String r="";
+//        char c;
+//        for (int i=0; i<s.length(); i++)
+//        {
+//                c = utf8ascii(s.charAt(i));
+//                if (c!=0) r+=c;
+//        }
+//        return r;
+//}
+//
+//// In Place conversion UTF8-string to Extended ASCII (ASCII is shorter!)
+//void utf8ascii(char* s)
+//{
+//        int k=0;
+//        char c;
+//        for (int i=0; i<strlen(s); i++)
+//        {
+//                c = utf8ascii(s[i]);
+//                if (c!=0)
+//                        s[k++]=c;
+//        }
+//        s[k]=0;
+//}
+//
+//int utf8_strlen(const String& str)
+//{
+//	String ascii = utf8ascii(str);
+//	return ascii.length();
+//}
 // Make complete path/name from cwdName and param
 //
 // 3 possible cases: param can be absolute path, relative path or only the name
@@ -1884,6 +1964,12 @@ bool FtpServer::makePath( char * fullName, char * param )
 //  for( uint8_t i = 0; i < utf8_strlen( fullName ); i ++ ) {
 //
 //  }
+
+  DEBUG_PRINT(F("utf8_strlen"));
+  DEBUG_PRINTLN(utf8_strlen(fullName));
+//  DEBUG_PRINT(F("utf8_strlen2"));
+//  DEBUG_PRINTLN(utf8_strlen2(fullName));
+
   if (utf8_strlen(fullName)>=FILENAME_LENGTH) {
       client.println(F("553 File name not allowed. Too long.") );
       return false;
@@ -1910,7 +1996,7 @@ bool FtpServer::makeExistsPath( char * path, char * param )
     return false;
   // RoSchmi
   //#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD
-#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD  || STORAGE_TYPE == STORAGE_SEEED_SD)
+#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC  || STORAGE_TYPE == STORAGE_SEEED_SD)
   if (strcmp(path, "/") == 0)  return true;
 #endif
   DEBUG_PRINT("PATH --> ")
@@ -2000,7 +2086,7 @@ char * FtpServer::makeDateTimeStr( char * tstr, uint16_t date, uint16_t time )
 
 
 uint32_t FtpServer::fileSize( FTP_FILE file ) {
-#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD)
+#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC || STORAGE_TYPE == STORAGE_SEEED_SD)
 	return file.size();
 #else
 	return file.fileSize();
@@ -2029,7 +2115,7 @@ uint32_t FtpServer::fileSize( FTP_FILE file ) {
 			return true;
 		}
 }
-#elif (STORAGE_TYPE == STORAGE_SD && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
+#elif ((STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
 		DEBUG_PRINT( path );
@@ -2066,7 +2152,7 @@ uint32_t FtpServer::fileSize( FTP_FILE file ) {
   			return true;
   		}
   }
-#elif STORAGE_TYPE <= STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFM || (STORAGE_TYPE == STORAGE_SD && ARDUINO_ARCH_SAMD)
+#elif STORAGE_TYPE <= STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFM || ((STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && ARDUINO_ARCH_SAMD)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
 		DEBUG_PRINT(F("File to open ") );
 		DEBUG_PRINT( path );
@@ -2092,7 +2178,7 @@ uint32_t FtpServer::fileSize( FTP_FILE file ) {
   		DEBUG_PRINT( path );
   		DEBUG_PRINT(F(" readType ") );
   		DEBUG_PRINTLN(readType);
-  #if (STORAGE_TYPE == STORAGE_SD && !defined(ESP32))
+  #if ((STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && !defined(ESP32))
   		if (readType == 0X01) {
   			readType = FILE_READ;
   		}else {
@@ -2150,7 +2236,7 @@ bool FtpServer::isDir( char * path )
   if( ! openFile( path, FTP_FILE_READ )) {
     return false;
   }
-#if STORAGE_TYPE == STORAGE_SD
+#if STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
 //  if (strcmp(path, "/") == 0) return true;
 //  res = file.isDirectory();
 //  DEBUG_PRINT(path);
@@ -2170,7 +2256,7 @@ bool FtpServer::isDir( char * path )
 bool FtpServer::timeStamp( char * path, uint16_t year, uint8_t month, uint8_t day,
                            uint8_t hour, uint8_t minute, uint8_t second )
 {
-#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS  || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SEEED_SD
+#if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS  || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC || STORAGE_TYPE == STORAGE_SEEED_SD
 //	struct tm tmDate = { second, minute, hour, day, month, year };
 //    time_t rawtime = mktime(&tmDate);
 
@@ -2235,7 +2321,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 }
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD
+#if STORAGE_TYPE == STORAGE_SD ||  STORAGE_TYPE == STORAGE_SD_MMC
   bool     FtpServer::rename( const char * path, const char * newpath ){
 
 		FTP_FILE myFileIn = STORAGE_MANAGER.open(path, FILE_READ);

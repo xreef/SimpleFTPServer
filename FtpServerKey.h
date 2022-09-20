@@ -32,6 +32,7 @@
 #define STORAGE_LITTLEFS 	7 	// LITTLEFS
 #define STORAGE_SEEED_SD 	8 	// Seeed_SD library
 #define STORAGE_FFAT  		9 	// ESP32 FFAT
+#define STORAGE_SD_MMC		10 	// SD_MMC library
 
 #define NETWORK_ESP8266_ASYNC 	(1)
 #define NETWORK_ESP8266 		(2) 	// Standard ESP8266WiFi

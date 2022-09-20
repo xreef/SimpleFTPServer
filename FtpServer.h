@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.2 (2022-07-06)"
+#define FTP_SERVER_VERSION "2.1.3 (2022-09-20)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -298,13 +298,18 @@
 		#define FTP_FILE_WRITE_APPEND "a+"
 		#define FTP_FILE_WRITE_CREATE "w+"
 	#else
-#if ESP_ARDUINO_VERSION_MAJOR >= 2
-		#include "FS.h"
-		#include "LittleFS.h"
-		#define STORAGE_MANAGER LittleFS
+#ifdef ESP32
+	#if ESP_ARDUINO_VERSION_MAJOR >= 2
+			#include "FS.h"
+			#include "LittleFS.h"
+			#define STORAGE_MANAGER LittleFS
+	#else
+			#include "LITTLEFS.h"
+			#define STORAGE_MANAGER LITTLEFS
+	#endif
 #else
-		#include "LITTLEFS.h"
-		#define STORAGE_MANAGER LITTLEFS
+	#include "LittleFS.h"
+	#define STORAGE_MANAGER LittleFS
 #endif
 		#define FTP_FILE File
 		#define FTP_DIR File
@@ -319,6 +324,17 @@
 #elif(STORAGE_TYPE == STORAGE_SD)
 	#include <SPI.h>
 	#include <SD.h>
+
+	#define STORAGE_MANAGER SD
+  	#define FTP_FILE File
+  	#define FTP_DIR File
+
+	#define FTP_FILE_READ FILE_READ
+	#define FTP_FILE_READ_ONLY FILE_READ
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+#elif(STORAGE_TYPE == STORAGE_SD_MMC)
+	#include <SPI.h>
+	#include <SD_MMC.h>
 
 	#define STORAGE_MANAGER SD
   	#define FTP_FILE File
@@ -584,7 +600,7 @@ private:
   bool     removeDir( const char * path ) { return STORAGE_MANAGER.rmdir( path ); };
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD
+#if STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
   bool     rename( const char * path, const char * newpath );
 #else
   bool     rename( const char * path, const char * newpath ) { return STORAGE_MANAGER.rename( path, newpath ); };
@@ -630,7 +646,7 @@ private:
 			  STORAGE_MANAGER.usedBytes()) >> 1;
   };
 #endif
-#elif STORAGE_TYPE == STORAGE_SD
+#elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
   uint32_t capacity() { return true; };
   uint32_t free() { return true; };
 #elif STORAGE_TYPE == STORAGE_SEEED_SD
