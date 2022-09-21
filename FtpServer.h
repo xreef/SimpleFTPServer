@@ -54,6 +54,9 @@
 	#elif defined(ARDUINO_ARCH_STM32)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_STM32
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_STM32
+	#elif defined(ARDUINO_ARCH_RP2040)
+		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_RP2040
+		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_RP2040
 	#elif defined(ARDUINO_ARCH_SAMD)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_SAMD
@@ -223,7 +226,7 @@
 	#error "no network type selected!"
 #endif
 
-#if defined(ESP8266) || defined(ESP32)
+#if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040)
 	#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
 	#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
 #else
@@ -286,7 +289,7 @@
 
 	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_LITTLEFS)
-	#if ESP8266
+	#if ESP8266 || ARDUINO_ARCH_RP2040
 		#include "LittleFS.h"
 		#define STORAGE_MANAGER LittleFS
 		#define FTP_FILE File
@@ -336,7 +339,7 @@
 	#include <SPI.h>
 	#include <SD_MMC.h>
 
-	#define STORAGE_MANAGER SD
+	#define STORAGE_MANAGER SD_MMC
   	#define FTP_FILE File
   	#define FTP_DIR File
 
@@ -624,7 +627,7 @@ private:
   uint32_t fileSize( FTP_FILE file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
-#if ESP8266
+#if ESP8266 || ARDUINO_ARCH_RP2040
   uint32_t capacity() {
 	  FSInfo fi;
 	  STORAGE_MANAGER.info(fi);
