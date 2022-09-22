@@ -1,23 +1,3 @@
-/**************************************************************************
- * This is a fork of the SimpleFTPServer on github
- * found at https://github.com/xreef/SimpleFTPServer.
- *
- * My version can be found as "MultiFTPServer"
- * at https://github.com/yasheena/MultiFTPServer.
- * 
- * I extended the code to enable more than one concurrent FTP session.
- * So i.e. it is possible to use WinSCP to edit files and use background
- * transfers (transfer queue).
- * 
- * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
- * for two concurrent FTP connections. But you can also use another value
- * by using the 3rd parameter of the FtpServer constructor, which I added
- * in MultiFTPServer (compared to SimpleFTPServer). A single new method
- * added for the MultiFTPServer is getMaxSessions() to get the actual
- * number of concurrently useable FTP sessions.
- * 
- **************************************************************************/
-
 /*
  * FtpServer Arduino, esp8266 and esp32 library for Ftp Server
  * Derived form Jean-Michel Gallego version
@@ -40,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.2 (2022-08-04) Multi"
+#define FTP_SERVER_VERSION "2.1.4 (2022-09-20)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -74,6 +54,9 @@
 	#elif defined(ARDUINO_ARCH_STM32)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_STM32
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_STM32
+	#elif defined(ARDUINO_ARCH_RP2040)
+		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_RP2040
+		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_RP2040
 	#elif defined(ARDUINO_ARCH_SAMD)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_SAMD
@@ -243,7 +226,7 @@
 	#error "no network type selected!"
 #endif
 
-#if defined(ESP8266) || defined(ESP32)
+#if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040)
 	#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
 	#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
 #else
@@ -306,7 +289,7 @@
 
 	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_LITTLEFS)
-	#if ESP8266
+	#if ESP8266 || ARDUINO_ARCH_RP2040
 		#include "LittleFS.h"
 		#define STORAGE_MANAGER LittleFS
 		#define FTP_FILE File
@@ -318,13 +301,18 @@
 		#define FTP_FILE_WRITE_APPEND "a+"
 		#define FTP_FILE_WRITE_CREATE "w+"
 	#else
-#if ESP_ARDUINO_VERSION_MAJOR >= 2
-		#include "FS.h"
-		#include "LittleFS.h"
-		#define STORAGE_MANAGER LittleFS
+#ifdef ESP32
+	#if ESP_ARDUINO_VERSION_MAJOR >= 2
+			#include "FS.h"
+			#include "LittleFS.h"
+			#define STORAGE_MANAGER LittleFS
+	#else
+			#include "LITTLEFS.h"
+			#define STORAGE_MANAGER LITTLEFS
+	#endif
 #else
-		#include "LITTLEFS.h"
-		#define STORAGE_MANAGER LITTLEFS
+	#include "LittleFS.h"
+	#define STORAGE_MANAGER LittleFS
 #endif
 		#define FTP_FILE File
 		#define FTP_DIR File
@@ -341,6 +329,17 @@
 	#include <SD.h>
 
 	#define STORAGE_MANAGER SD
+  	#define FTP_FILE File
+  	#define FTP_DIR File
+
+	#define FTP_FILE_READ FILE_READ
+	#define FTP_FILE_READ_ONLY FILE_READ
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+#elif(STORAGE_TYPE == STORAGE_SD_MMC)
+	#include <SPI.h>
+	#include <SD_MMC.h>
+
+	#define STORAGE_MANAGER SD_MMC
   	#define FTP_FILE File
   	#define FTP_DIR File
 
@@ -459,11 +458,9 @@
 #ifdef FTP_SERVER_DEBUG
 	#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
 	#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
-	#define DEBUG_IDX { DEBUG_PRINTER.printf("(%d) ", idx); }
 #else
 	#define DEBUG_PRINT(...) {}
 	#define DEBUG_PRINTLN(...) {}
-	#define DEBUG_IDX {}
 #endif
 
 #define FTP_CMD_PORT 21           // Command port on wich server is listening
@@ -608,7 +605,7 @@ private:
   bool     removeDir( const char * path ) { return STORAGE_MANAGER.rmdir( path ); };
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD
+#if STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
   bool     rename( const char * path, const char * newpath );
 #else
   bool     rename( const char * path, const char * newpath ) { return STORAGE_MANAGER.rename( path, newpath ); };
@@ -632,7 +629,7 @@ private:
   uint32_t fileSize( FTP_FILE file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
-#if ESP8266
+#if ESP8266 || ARDUINO_ARCH_RP2040
   uint32_t capacity() {
 	  FSInfo fi;
 	  STORAGE_MANAGER.info(fi);
@@ -654,7 +651,7 @@ private:
 			  STORAGE_MANAGER.usedBytes()) >> 1;
   };
 #endif
-#elif STORAGE_TYPE == STORAGE_SD
+#elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
   uint32_t capacity() { return true; };
   uint32_t free() { return true; };
 #elif STORAGE_TYPE == STORAGE_SEEED_SD

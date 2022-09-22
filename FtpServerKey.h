@@ -55,6 +55,7 @@
 #define STORAGE_LITTLEFS 	7 	// LITTLEFS
 #define STORAGE_SEEED_SD 	8 	// Seeed_SD library
 #define STORAGE_FFAT  		9 	// ESP32 FFAT
+#define STORAGE_SD_MMC		10 	// SD_MMC library
 
 #define NETWORK_ESP8266_ASYNC 	(1)
 #define NETWORK_ESP8266 		(2) 	// Standard ESP8266WiFi
@@ -62,6 +63,7 @@
 #define NETWORK_W5100 			(4)		// Standard Arduino Ethernet library
 #define NETWORK_ENC28J60 		(5) 	// UIPEthernet library
 #define NETWORK_ESP32 			(6) 	// Standard WiFi library
+#define NETWORK_RP2040_WIFI		(6) 	// Raspberry Pi Pico W standard WiFi library
 #define NETWORK_ESP32_ETH 		(7)		// Standard ETH library
 #define NETWORK_WiFiNINA 		(8)		// Standard WiFiNINA library
 #define NETWORK_SEEED_RTL8720DN (9) 	// Standard SEED WiFi library
@@ -90,6 +92,12 @@
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_STM32 		NETWORK_W5100
 	#define DEFAULT_STORAGE_TYPE_STM32 					STORAGE_SDFAT2
 #endif
+// Raspberry Pi Pico (rp2040) configuration
+#ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_RP2040
+    #define DEFAULT_FTP_SERVER_NETWORK_TYPE_RP2040 		NETWORK_RP2040_WIFI
+	#define DEFAULT_STORAGE_TYPE_RP2040					STORAGE_LITTLEFS
+#endif
+
 // Arduino SAMD21 like Arduino MKR Nano 33 IoT or Wio Terminal
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO_SAMD
 // Wio Terminal
