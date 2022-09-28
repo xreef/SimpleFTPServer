@@ -1,17 +1,11 @@
-# MultiFTPServer
-
-This is a fork of the SimpleFTPServer on github found at https://github.com/xreef/SimpleFTPServer.
-
-I extended the code to enable more than one concurrent FTP session. So i.e. it is possible to use WinSCP to edit files and use background transfers (transfer queue).
-
-On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2 for two concurrent FTP connections. But you can also use another value by using the 3rd parameter of the FtpServer constructor, which I added in MultiFTPServer (compared to SimpleFTPServer). A single new method added for the MultiFTPServer is getMaxSessions() to get the actual number of concurrently useable FTP sessions. 
-
-The following text is the original description of the SimpleFTPServer.
-
 # SimpleFTPServer
 
-[Instruction on FTP server on esp8266 and esp32](https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32)
-[Simple FTP Server library now with support for Wio Terminal and SD](https://www.mischianti.org/2021/07/01/simple-ftp-server-library-now-with-support-for-wio-terminal-and-sd/)
+[All articles and information](https://www.mischianti.org/category/my-libraries/simple-ftp-server/)
+
+ - [Instruction on FTP server on esp8266 and esp32](https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32)
+ - [Simple FTP Server library now with support for Wio Terminal and SD](https://www.mischianti.org/2021/07/01/simple-ftp-server-library-now-with-support-for-wio-terminal-and-sd/)
+
+
 
 #### Simple FTP Server for 
  - Raspberry Pi Pico W (Flash: LittleFS) (To test SD and SdFat)
@@ -32,6 +26,14 @@ The following text is the original description of the SimpleFTPServer.
 - 2022-02-25 1.2.1 Fix anonymous user begin and fix SPIFFS wrong display
 - 2022-02-22 1.2.0 Add anonymous user and implement correct RFC (#9 now work correctly with File Explorer)
 - 2022-02-01 1.1.1 Add workaround to start FTP server before connection, add end and setLocalIP method.
+
+#### Code from fork
+From fork https://github.com/yasheena/MultiFTPServer
+Enable more than one concurrent FTP session. So i.e. it is possible to use WinSCP to edit files and use background transfers (transfer queue).
+
+On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2 for two concurrent FTP connections. But you can also use another value by using the 3rd parameter of the FtpServer constructor, which I added in MultiFTPServer (compared to SimpleFTPServer). A single new method added for the MultiFTPServer is getMaxSessions() to get the actual number of concurrently useable FTP sessions. 
+
+## Info
 
 <!-- wp:paragraph -->
 <p>When I develop a new solution I'd like to divide the application in layer, and so I'd like focus my attention in only one aspect at time. </p>

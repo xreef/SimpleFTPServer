@@ -338,7 +338,7 @@ void FtpServer::_handleFTP() {
 		}
 #endif
 	}
-	return cmdStage | (transferStage << 3) | (dataConn << 6);
+	// return cmdStage | (transferStage << 3) | (dataConn << 6);
 }
 
 void FtpServer::clientConnected()

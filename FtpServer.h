@@ -335,6 +335,16 @@
 	#define FTP_FILE_READ FILE_READ
 	#define FTP_FILE_READ_ONLY FILE_READ
 	#define FTP_FILE_READ_WRITE FILE_WRITE
+#ifdef ESP32
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_APPEND
+#else
+	#define FTP_FILE_READ_WRITE FILE_WRITE
+	#define FTP_FILE_WRITE_APPEND FILE_WRITE
+#endif
+	#define FTP_FILE_WRITE_CREATE FILE_WRITE
+
+	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_SD_MMC)
 	#include <SPI.h>
 	#include <SD_MMC.h>
@@ -355,7 +365,7 @@
 #endif
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
-	#define FILENAME_LENGTH 32
+	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_SEEED_SD)
 	#include <Seeed_FS.h>
 	#define STORAGE_MANAGER SD
@@ -376,7 +386,7 @@
 	#define FTP_FILE_WRITE_APPEND FILE_APPEND
 	#define FTP_FILE_WRITE_CREATE FILE_WRITE
 
-	#define FILENAME_LENGTH 32
+	#define FILENAME_LENGTH 255
 
 #elif (STORAGE_TYPE == STORAGE_SDFAT1)
 	#include <SdFat.h>
@@ -458,9 +468,11 @@
 #ifdef FTP_SERVER_DEBUG
 	#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
 	#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+	#define DEBUG_IDX { DEBUG_PRINTER.print(F("("));DEBUG_PRINTER.print(idx);DEBUG_PRINTER.print(F(") ")); }
 #else
 	#define DEBUG_PRINT(...) {}
 	#define DEBUG_PRINTLN(...) {}
+	#define DEBUG_IDX {}
 #endif
 
 #define FTP_CMD_PORT 21           // Command port on wich server is listening

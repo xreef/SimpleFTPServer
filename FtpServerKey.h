@@ -1,32 +1,18 @@
-/**************************************************************************
- * This is a fork of the SimpleFTPServer on github
- * found at https://github.com/xreef/SimpleFTPServer.
+/********************************************************************************
+ * FtpServer for:
+ *  - Arduino
+ *  - Arduino SAMD (WiFiNINA)
+ *  - esp8266
+ *  - esp32
+ *  - STM32
+ *  - Raspberry Pi Pico W
  *
- * My version can be found as "MultiFTPServer"
- * at https://github.com/yasheena/MultiFTPServer.
- * 
- * I extended the code to enable more than one concurrent FTP session.
- * So i.e. it is possible to use WinSCP to edit files and use background
- * transfers (transfer queue).
- * 
- * On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2
- * for two concurrent FTP connections. But you can also use another value
- * by using the 3rd parameter of the FtpServer constructor, which I added
- * in MultiFTPServer (compared to SimpleFTPServer). A single new method
- * added for the MultiFTPServer is getMaxSessions() to get the actual
- * number of concurrently useable FTP sessions.
- * 
- **************************************************************************/
-
-/*
- * FtpServer Arduino, esp8266 and esp32 library for Ftp Server
  * Derived form Jean-Michel Gallego version
- *
  * AUTHOR:  Renzo Mischianti
  *
- * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32
+ * https://www.mischianti.org/category/my-libraries/simple-ftp-server/
  *
- */
+ ********************************************************************************/
 
 /*******************************************************************************
  **                                                                            **
@@ -42,9 +28,6 @@
 
 // Define where debug output will be printed.
 #define DEBUG_PRINTER Serial
-
-// Define the maximum number of concurrent sessions
-#define FTP_MAX_SESSIONS 2
 
 #define STORAGE_SDFAT1 		1 	// Library SdFat version 1.4.x
 #define STORAGE_SDFAT2 		2 	// Library SdFat version >= 2.0.2
@@ -125,5 +108,8 @@
 // Best value depends on many factors: SD card, client side OS, ... 
 // But it can be reduced to 512 if memory usage is critical.
 #define FTP_BUF_SIZE 1024 //2048 //1024 // 512
+
+// Define the maximum number of concurrent sessions
+#define FTP_MAX_SESSIONS 2
 
 #endif // FTP_SERVER_CONFIG_H
