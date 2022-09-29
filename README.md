@@ -16,7 +16,7 @@
  - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
-- 2022-09-21 2.1.4 Add support for Raspberry Pi Pico W and rp2040 boards
+- 2022-09-21 2.1.4 Add support for Raspberry Pi Pico W and rp2040 boards, Fix SD card config
 - 2022-09-20 2.1.3 Soft AP IP management, more disconnect event and SD_MCC
 - 2022-05-21 2.1.2 Fix SD path (#19)
 - 2022-05-21 2.1.1 Minor fix
