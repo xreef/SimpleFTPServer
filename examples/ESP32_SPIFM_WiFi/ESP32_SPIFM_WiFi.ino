@@ -1,3 +1,15 @@
+/**
+ * ESP32 and external SPI Flash FTP server
+ *
+ *
+// esp32 configuration
+#ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
+	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
+	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SPIFM
+#endif
+ *
+ */
+
 #include <Arduino.h>
 #include "SdFat.h"
 #include "Adafruit_SPIFlash.h"
