@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.4 (2022-09-20)"
+#define FTP_SERVER_VERSION "2.1.5 (2023-01-13)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"

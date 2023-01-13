@@ -510,9 +510,6 @@ bool FtpServer::processCommand()
     DEBUG_PRINT( int( dataIp[0]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[1]) ); DEBUG_PRINT( F(".") );
     DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINTLN( int( dataIp[3]) );
 
-    DEBUG_PRINT( F(" IP 0.0.0.0: ") );
-    DEBUG_PRINT(dataIp.toString());
-
 #if !defined(ARDUINO_ARCH_RP2040) && ((FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_ASYNC) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP32)) // || 	(FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_WiFiNINA)  || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN))
     if (dataIp.toString() ==  F("0.0.0.0")) {
     	dataIp = NET_CLASS.softAPIP();
@@ -658,11 +655,11 @@ bool FtpServer::processCommand()
   else if( CommandIs( "MLST" ))
   {
     char path[ FTP_CWD_SIZE ];
-    uint16_t dat, tim;
+    uint16_t dat=0, tim=0;
     char dtStr[ 15 ];
     bool isdir;
     if( haveParameter() && makeExistsPath( path )){
-      if( ! getFileModTime( path, & dat, & tim )) {
+      if( ! getFileModTime( path, &dat, &tim )) {
         client.print( F("550 Unable to retrieve time for ") ); client.println( parameter );
       } else
       {
@@ -933,9 +930,9 @@ bool FtpServer::processCommand()
         }
         else if( mdtm ) // get file modification time
         {
-          uint16_t dat, tim;
+          uint16_t dat=0, tim=0;
           char dtStr[ 15 ];
-          if( getFileModTime( path, & dat, & tim )) {
+          if( getFileModTime( path, &dat, &tim )) {
             client.print( F("213 ") ); client.println( makeDateTimeStr( dtStr, dat, tim ) );
           } else {
             client.println("550 Unable to retrieve time" );
@@ -2302,7 +2299,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 	#else
 		return dir.getLastWrite();
 	#endif
-#elif STORAGE_TYPE == STORAGE_SDFAT1 || STORAGE_TYPE == STORAGE_SPIFM
+#elif STORAGE_TYPE == STORAGE_SDFAT1
   dir_t d;
 
   if( ! file.dirEntry( & d ))
@@ -2310,7 +2307,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
   * pdate = d.lastWriteDate;
   * ptime = d.lastWriteTime;
   return true;
-#elif  STORAGE_TYPE == STORAGE_SDFAT2
+#elif  STORAGE_TYPE == STORAGE_SDFAT2  || STORAGE_TYPE == STORAGE_SPIFM
   return file.getModifyDateTime( pdate, ptime );
 #endif
   return false;
