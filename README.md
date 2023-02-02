@@ -12,6 +12,7 @@
  - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
+- 2022-02-02 2.1.6 Fix esp8266 Ethernet (w5x00) issue and explain solution for ESP32 Ethernet (w5x00), add new Networks management
 - 2022-01-13 2.1.5 Fix SPIFM external SPI Flash date management (add SPIFM esp32 example)
 - 2022-09-21 2.1.4 Add support for Raspberry Pi Pico W and rp2040 boards, Fix SD card config
 - 2022-09-20 2.1.3 Soft AP IP management, more disconnect event and SD_MCC

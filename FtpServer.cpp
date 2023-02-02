@@ -70,7 +70,7 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
 	}
   // Tells the ftp server to begin listening for incoming connection
   ftpServer.begin();
-  #if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
+  #if (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
   ftpServer.setNoDelay( true );
   #endif
 //  localIp = _localIP == FTP_NULLIP() || (uint32_t) _localIP == 0 ? NET_CLASS.localIP() : _localIP ;
@@ -90,7 +90,7 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   this->welcomeMessage = _welcomeMessage;
 
   dataServer.begin();
-#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
+#if (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
   dataServer.setNoDelay( true );
 #endif
 
@@ -199,7 +199,8 @@ uint8_t FtpServer::handleFTP() {
 			 *
 			 */
 //			DEBUG_PRINTLN(status);
-#elif defined(ESP8266) // || defined(ARDUINO_ARCH_RP2040)
+#elif (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242))
+
 		  if( ftpServer.hasClient())
 		  {
 		    client.stop();
@@ -995,7 +996,7 @@ int FtpServer::dataConnect( bool out150 )
       {
 		#if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
     	  	  data = dataServer.available();
-		#elif defined(ESP8266) // || defined(ARDUINO_ARCH_RP2040)
+		#elif (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) // || defined(ARDUINO_ARCH_RP2040)
 			if( dataServer.hasClient())
 			{
 			  data.stop();

@@ -19,6 +19,7 @@
 
 // Uncomment to enable printing out nice debug messages.
 // #define FTP_SERVER_DEBUG
+// #define FTP_ADDITIONAL_DEBUG
 
 // Define where debug output will be printed.
 #define DEBUG_PRINTER Serial
@@ -38,6 +39,7 @@
 #define NETWORK_ESP8266 		(2) 	// Standard ESP8266WiFi
 #define NETWORK_ESP8266_242 	(3) 	// ESP8266WiFi before 2.4.2 core
 #define NETWORK_W5100 			(4)		// Standard Arduino Ethernet library
+#define NETWORK_ETHERNET		(4)		// Standard Arduino Ethernet library
 #define NETWORK_ENC28J60 		(5) 	// UIPEthernet library
 #define NETWORK_ESP32 			(6) 	// Standard WiFi library
 #define NETWORK_RP2040_WIFI		(6) 	// Raspberry Pi Pico W standard WiFi library
@@ -48,6 +50,7 @@
 #define NETWORK_ETHERNET_ENC 	(11)	// EthernetENC library (evolution of UIPEthernet
 #define NETWORK_ETHERNET_STM 	(12)
 #define NETWORK_UIPETHERNET 	(13)	// UIPEthernet library same of NETWORK_ENC28J60
+#define NETWORK_ETHERNET_GENERIC	(14)	// Ethernet generic
 
 // esp8266 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266
@@ -58,6 +61,25 @@
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
 	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_FFAT
+	/**
+To use Ethernet.h with esp32 fix would be to change in Ethernet.h the line
+class EthernetServer : public Server {
+to
+class EthernetServer : public Stream {
+
+or
+
+in \esp32\2.0.6\cores\esp32\Server.h
+A workaround is to change line 28 of the ESP32 core's Server.h from:
+    virtual void begin(uint16_t port=0) =0;
+to
+    virtual void begin() =0;
+However, the last one, that will break anything that uses the ESP32 WiFi library's WebServer class.
+
+https://github.com/arduino-libraries/Ethernet/issues/193
+https://github.com/arduino-libraries/Ethernet/issues/88
+	 *
+	 */
 #endif
 // Standard AVR Arduino configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
