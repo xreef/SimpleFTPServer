@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.4 (2022-09-20)"
+#define FTP_SERVER_VERSION "2.1.6 (2023-02-02)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -141,6 +141,21 @@
 		#define NET_CLASS WiFi
 //		#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
 //		#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ETHERNET_GENERIC)
+
+		#include <Ethernet_Generic.h>
+		#include <SPI.h>
+		#define FTP_CLIENT_NETWORK_CLASS EthernetClient
+		#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
+		#define NET_CLASS Ethernet
+
+//		#if defined(ESP8266) || defined(ESP32)
+//			#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
+//			#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//		#else
+//			#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
+//			#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+//		#endif
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_W5100 || FTP_SERVER_NETWORK_TYPE == NETWORK_ETHERNET_ENC)
 
 		#include <Ethernet.h>
@@ -170,7 +185,7 @@
 //		#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 //		#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
 //	#endif
-#elif(EMAIL_NETWORK_TYPE == NETWORK_ETHERNET_LARGE)
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ETHERNET_LARGE)
 
 	#include <EthernetLarge.h>
 	#include <SPI.h>
@@ -178,7 +193,7 @@
 	#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
 	#define NET_CLASS Ethernet
 
-#elif(EMAIL_NETWORK_TYPE == NETWORK_ETHERNET_STM)
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ETHERNET_STM)
 
 	#include <Ethernet_STM.h>
 	#include <SPI.h>

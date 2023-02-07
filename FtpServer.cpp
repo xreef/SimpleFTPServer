@@ -100,7 +100,7 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
 	}
   // Tells the ftp server to begin listening for incoming connection
   FtpServer::ftpServer->begin();
-  #if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
+  #if (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
   FtpServer::ftpServer->setNoDelay( true );
   #endif
 //  FtpServer::localIp = _localIP == FTP_NULLIP() || (uint32_t) _localIP == 0 ? NET_CLASS.localIP() : _localIP ;
@@ -119,7 +119,7 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
   FtpServer::welcomeMessage = _welcomeMessage;
 
   FtpServer::dataServer->begin();
-#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
+#if (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) || defined(ARDUINO_ARCH_RP2040) || FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
   FtpServer::dataServer->setNoDelay( true );
 #endif
 
@@ -250,7 +250,7 @@ void FtpServer::_handleFTP() {
 			 *
 			 */
 //      DEBUG_IDX; DEBUG_PRINTLN(status);
-#elif defined(ESP8266)
+#elif (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242))
 		  if( FtpServer::ftpServer->hasClient())
 		  {
 		    client.stop();
@@ -1055,7 +1055,7 @@ int FtpServer::dataConnect( bool out150 )
       {
 		#if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
     	  	  data = FtpServer::dataServer->available();
-		#elif defined(ESP8266)
+		#elif (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242)) // || defined(ARDUINO_ARCH_RP2040)
 			if( FtpServer::dataServer->hasClient())
 			{
 			  data.stop();
@@ -1459,7 +1459,6 @@ bool FtpServer::doList()
 //		data.print( F("\t") );
 //		data.println( fileDir.name() );
 
-//    DEBUG_IDX;
 //		DEBUG_PRINT( long( fileDir.size()));
 //		DEBUG_PRINT( F("\t") );
 //		DEBUG_PRINTLN( fileDir.name() );
@@ -2371,7 +2370,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 	#else
 		return dir.getLastWrite();
 	#endif
-#elif STORAGE_TYPE == STORAGE_SDFAT1 || STORAGE_TYPE == STORAGE_SPIFM
+#elif STORAGE_TYPE == STORAGE_SDFAT1
   dir_t d;
 
   if( ! file.dirEntry( & d ))
@@ -2379,7 +2378,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
   * pdate = d.lastWriteDate;
   * ptime = d.lastWriteTime;
   return true;
-#elif  STORAGE_TYPE == STORAGE_SDFAT2
+#elif  STORAGE_TYPE == STORAGE_SDFAT2  || STORAGE_TYPE == STORAGE_SPIFM
   return file.getModifyDateTime( pdate, ptime );
 #endif
   return false;
