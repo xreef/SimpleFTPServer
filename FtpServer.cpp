@@ -133,7 +133,7 @@ void FtpServer::credentials( const char * _user, const char * _pass )
 {
   if( strlen( _user ) > 0 && strlen( _user ) < FTP_CRED_SIZE )
 //    strcpy( user, _user );
-	  this->user = user;
+	  this->user = _user;
   if( strlen( _pass ) > 0 && strlen( _pass ) < FTP_CRED_SIZE )
 //    strcpy( pass, _pass );
 	  this->pass = _pass;
