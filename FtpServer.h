@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.6 (2023-02-02)"
+#define FTP_SERVER_VERSION "2.1.7 (2023-10-17)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -627,7 +627,7 @@ private:
   bool     removeDir( const char * path ) { return STORAGE_MANAGER.rmdir( path ); };
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
+#if (STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && !defined(ESP32)
   bool     rename( const char * path, const char * newpath );
 #else
   bool     rename( const char * path, const char * newpath ) { return STORAGE_MANAGER.rename( path, newpath ); };
