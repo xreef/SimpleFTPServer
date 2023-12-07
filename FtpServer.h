@@ -487,7 +487,7 @@
 	#define DEBUG_PRINTLN(...) {}
 #endif
 
-#define FTP_CMD_PORT 21           // Command port on wich server is listening
+#define FTP_CMD_PORT 21           // Command port on which server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
@@ -512,8 +512,8 @@ enum ftpTransfer { FTP_Close = 0, // In this stage, close data channel
                    FTP_Nlst,      //  list of name of files
                    FTP_Mlsd };    //  listing for machine processing
 
-enum ftpDataConn { FTP_NoConn = 0,// No data connexion
-                   FTP_Pasive,    // Pasive type
+enum ftpDataConn { FTP_NoConn = 0,// No data connection
+                   FTP_Pasive,    // Passive type
                    FTP_Active };  // Active type
 
 enum FtpOperation {
@@ -726,9 +726,9 @@ private:
   FTP_FILE     file;
   FTP_DIR      dir;
 
-  ftpCmd      cmdStage;               // stage of ftp command connexion
-  ftpTransfer transferStage;          // stage of data connexion
-  ftpDataConn dataConn;               // type of data connexion
+  ftpCmd      cmdStage;               // stage of ftp command connection
+  ftpTransfer transferStage;          // stage of data connection
+  ftpDataConn dataConn;               // type of data connection
 
   bool anonymousConnection = false;
 
