@@ -387,7 +387,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "FEAT" ))
   {
-    client.println(F("211-Extensions suported:"));
+    client.println(F("211-Extensions supported:"));
     client.println(F(" MLST type*;modify*;size*;") );
     client.println(F(" MLSD") );
     client.println(F(" MDTM") );
@@ -491,7 +491,7 @@ bool FtpServer::processCommand()
     if( ParameterIs( "S" )) {
       client.println(F("200 S Ok") );
     } else {
-      client.println(F("504 Only S(tream) is suported") );
+      client.println(F("504 Only S(tream) is supported") );
     }
   }
   //
@@ -573,7 +573,7 @@ bool FtpServer::processCommand()
     // else if( ParameterIs( "R" ))
     //  client.println(F("200 B Ok") );
     }else{
-      client.println(F("504 Only F(ile) is suported") );
+      client.println(F("504 Only F(ile) is supported") );
     }
   }
   //
@@ -586,7 +586,7 @@ bool FtpServer::processCommand()
     } else if( ParameterIs( "I" )) {
       client.println(F("200 TYPE is now 8-bit binary") );
     } else {
-      client.println(F("504 Unknow TYPE") );
+      client.println(F("504 Unknown TYPE") );
     }
   }
 
@@ -696,8 +696,8 @@ bool FtpServer::processCommand()
       client.println(F("200 OK, UTF8 ON") );
       DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
     } else {
-      client.println(F("504 Unknow OPTS") );
-      DEBUG_PRINTLN(F("504 Unknow OPTS") );
+      client.println(F("504 Unknown OPTS") );
+      DEBUG_PRINTLN(F("504 Unknown OPTS") );
     }
   }
   //
@@ -975,14 +975,14 @@ bool FtpServer::processCommand()
       }
     }
     else {
-    	client.print( F("500 Unknow SITE command ") ); client.println( parameter );
+    	client.print( F("500 Unknown SITE command ") ); client.println( parameter );
     }
   }
   //
   //  Unrecognized commands ...
   //
   else
-    client.println(F("500 Unknow command") );
+    client.println(F("500 Unknown command") );
   return true;
 }
 
@@ -1709,7 +1709,7 @@ bool FtpServer::doMlsd()
     dir.close();
 #endif
   data.stop();
-  DEBUG_PRINTLN(F("All file readed!!"));
+  DEBUG_PRINTLN(F("All file read!!"));
   return false;
 }
 
@@ -2234,7 +2234,7 @@ bool FtpServer::isDir( char * path )
 //  if (strcmp(path, "/") == 0) return true;
 //  res = file.isDirectory();
 //  DEBUG_PRINT(path);
-//  DEBUG_PRINT(" IS DIRECOTORY --> ");
+//  DEBUG_PRINT(" IS DIRECTORY --> ");
 //  DEBUG_PRINTLN(res);
   return true;
 #else
