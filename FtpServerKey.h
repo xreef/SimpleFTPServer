@@ -60,7 +60,7 @@
 // esp32 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
-	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_FFAT
+	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SD
 	/**
 To use Ethernet.h with esp32 fix would be to change in Ethernet.h the line
 class EthernetServer : public Server {
