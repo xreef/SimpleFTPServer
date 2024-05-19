@@ -594,17 +594,17 @@ private:
 #endif
   int8_t  readChar();
 
-  const char* getFileName(FTP_FILE *file){
+  const String getFileName(FTP_FILE *file){
 	#if STORAGE_TYPE <= STORAGE_SDFAT2
 	  int max_characters = 100;
 	  char f_name[max_characters];
-	  file->getName(f_name, max_characters);
+	  file->getName(f_name, sizeof(f_name));
 	  String filename = String(f_name);
-	    return filename.c_str();
+	    return filename;
 	#elif STORAGE_TYPE == STORAGE_FATFS
-	  return file->fileName();
+	  return String(file->fileName());
 	#else
-	  return file->name();
+	  return String(file->name());
 	#endif
   }
   bool     exists( const char * path ) {
@@ -648,7 +648,7 @@ private:
 #endif
 //  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
 //  bool openFile( const char * path, const char * readType );
-  uint32_t fileSize( FTP_FILE file );
+  uint32_t fileSize( FTP_FILE & file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
 #if ESP8266 || ARDUINO_ARCH_RP2040
