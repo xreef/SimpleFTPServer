@@ -20,6 +20,7 @@
  *   MDTM, MFMT
  *   FEAT, SIZE
  *   SITE FREE
+ *   SYST
  *   HELP
  *
  * Tested with those clients:
@@ -262,6 +263,7 @@ uint8_t FtpServer::handleFTP() {
 			}
 		} else if (cmdStage > FTP_Client
 				&& !((int32_t) (millisEndConnection - millis()) > 0)) {
+			DEBUG_PRINTLN(F("530 Timeout"));
 			client.println(F("530 Timeout"));
 			millisDelay = millis() + 200;       // delay of 200 ms
 			cmdStage = FTP_Stop;
@@ -292,9 +294,10 @@ uint8_t FtpServer::handleFTP() {
 void FtpServer::clientConnected()
 {
   DEBUG_PRINTLN( F(" Client connected!") );
-  client.print(F("220 --- ")); client.print(welcomeMessage); client.println(F(" ---"));
+  DEBUG_PRINTLN( String("welcomeMessage: '") + welcomeMessage + "'" );
+  // client.print(F("220 --- ")); client.print(welcomeMessage); client.println(F(" ---"));
   client.println(F("220 ---   By Renzo Mischianti   ---"));
-  client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
+  // client.println(F("220 ---   Version " FTP_SERVER_VERSION "   ---"));
   iCL = 0;
   if (FtpServer::_callback) {
 	  FtpServer::_callback(FTP_CONNECT, free(), capacity());
@@ -339,7 +342,7 @@ bool FtpServer::processCommand()
   {
 	  DEBUG_PRINT(F("USER: "));
 	  DEBUG_PRINT(parameter);
-	  DEBUG_PRINT(F(" "));
+	  DEBUG_PRINT(F(" Expected: "));
 	  DEBUG_PRINTLN(user)
 
 	if (this->anonymousConnection &&  ! strcmp( parameter, user )) {
@@ -349,12 +352,14 @@ bool FtpServer::processCommand()
       cmdStage = FTP_Cmd;
 	} else if( ! strcmp( parameter, user ))
     {
+      DEBUG_PRINTLN(F("331 Ok. Password required") );
       client.println(F("331 Ok. Password required") );
       strcpy( cwdName, "/" );
       cmdStage = FTP_Pass;
     }
     else
     {
+      DEBUG_PRINTLN(F("530 ") );
       client.println(F("530 ") );
       cmdStage = FTP_Stop;
     }
@@ -371,13 +376,13 @@ bool FtpServer::processCommand()
     }
     if( ! strcmp( parameter, pass ))
     {
-    	DEBUG_PRINTLN( F(" Authentication Ok. Waiting for commands.") );
-
+      DEBUG_PRINTLN( F("230 Authentication Ok. Waiting for commands.") );
       client.println(F("230 Ok") );
       cmdStage = FTP_Cmd;
     }
     else
     {
+      DEBUG_PRINTLN(F("530 ") );
     	client.println( F("530 ") );
       cmdStage = FTP_Stop;
     }
@@ -387,28 +392,50 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "FEAT" ))
   {
-    client.println(F("211-Extensions supported:"));
-    client.println(F(" MLST type*;modify*;size*;") );
-    client.println(F(" MLSD") );
-    client.println(F(" MDTM") );
-    client.println(F(" MFMT") );
+    client.println(F("211-Features:"));
+    if(cmdStage == FTP_Cmd)
+    {
+        client.println(F(" MLST type*;modify*;size*;") );
+        client.println(F(" MLSD") );
+        client.println(F(" MDTM") );
+        client.println(F(" MFMT") );
 #ifdef UTF8_SUPPORT
-	client.println(F(" UTF8") );
+        client.println(F(" UTF8") );
 #endif
-    client.println(F(" SIZE") );
-    client.println(F(" SITE FREE") );
-    client.println(F("211 End.") );
-  }
+        client.println(F(" SIZE") );
+        client.println(F(" SITE FREE") );
+    }
+    client.println(F("211 End") );
+    DEBUG_PRINTLN(F("211 FEAT End.") );
+ }
   //
   //  AUTH - Not implemented
   //
   else if( CommandIs( "AUTH" ))
+  {
+    DEBUG_PRINTLN(F("502 ") );
     client.println(F("502 ") );
+  }
+  //
+  //  SYST - System
+  //
+  else if( CommandIs( "SYST" ))
+  {
+    DEBUG_PRINTLN(F("215 ESP"));
+    client.println(F("215 ESP"));
+//    FtpOutCli << F("215 ESP") << endl;
+  }
+  else if( CommandIs( "PWD" ))
+  {
+	  DEBUG_PRINTLN( F("257 /") );
+	  client.println( F("257 /") );
+  }
   //
   //  Unrecognized commands at stage of authentication
   //
   else if( cmdStage < FTP_Cmd )
   {
+    DEBUG_PRINTLN(F("530 Still in Auth state") );
     client.println(F("530 ") );
     cmdStage = FTP_Stop;
   }
@@ -432,7 +459,7 @@ bool FtpServer::processCommand()
            ( CommandIs( "CWD" ) && ParameterIs( ".." )))
   {
     bool ok = false;
-    
+
     if( strlen( cwdName ) > 1 )            // do nothing if cwdName is root
     {
       // if cwdName ends with '/', remove it (must not append)
@@ -464,7 +491,7 @@ bool FtpServer::processCommand()
     if( haveParameter() && makeExistsPath( path ))
     {
       strcpy( cwdName, path );
-      client.print( F("250 Directory changed to ") ); client.print(cwdName); client.println();
+      client.print( F("250 Directory changed to ") ); client.println(cwdName);
     }
   }
   //
@@ -887,14 +914,7 @@ bool FtpServer::processCommand()
     }
     rnfrCmd = false;
   }
-  /*
-  //
-  //  SYST - System
-  //
-  else if( CommandIs( "SYST" ))
-    FtpOutCli << F("215 MSDOS") << endl;
-  */
-  
+
   ///////////////////////////////////////
   //                                   //
   //   EXTENSIONS COMMANDS (RFC 3659)  //
@@ -975,6 +995,7 @@ bool FtpServer::processCommand()
       }
     }
     else {
+    	DEBUG_PRINT( F("500 Unknown SITE command ") ); DEBUG_PRINTLN( parameter );
     	client.print( F("500 Unknown SITE command ") ); client.println( parameter );
     }
   }
@@ -982,7 +1003,10 @@ bool FtpServer::processCommand()
   //  Unrecognized commands ...
   //
   else
+  {
+    DEBUG_PRINTLN(F("500 Unknown command") );
     client.println(F("500 Unknown command") );
+  }
   return true;
 }
 
@@ -1827,6 +1851,7 @@ int8_t FtpServer::readChar()
     if( rc == -2 )
     {
       iCL = 0;
+      DEBUG_PRINTLN(F("500 Syntax error"));
       client.println(F("500 Syntax error"));
     }
   }
@@ -1837,6 +1862,7 @@ bool FtpServer::haveParameter()
 {
   if( parameter != NULL && strlen( parameter ) > 0 )
     return true;
+  DEBUG_PRINTLN("501 No file name" );
   client.println("501 No file name" );
   return false;  
 }
@@ -1951,6 +1977,7 @@ bool FtpServer::makePath( char * fullName, char * param )
     fullName[ strl ] = 0;
   if( strlen( fullName ) >= FTP_CWD_SIZE )
   {
+    DEBUG_PRINT(F("500 Command line too long"));
     client.println(F("500 Command line too long"));
     return false;
   }
