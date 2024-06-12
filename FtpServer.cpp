@@ -295,8 +295,8 @@ void FtpServer::clientConnected()
 {
   DEBUG_PRINTLN( F(" Client connected!") );
   DEBUG_PRINTLN( String("welcomeMessage: '") + welcomeMessage + "'" );
-  // client.print(F("220 --- ")); client.print(welcomeMessage); client.println(F(" ---"));
-  client.println(F("220 ---   By Renzo Mischianti   ---"));
+  client.print(F("220 --- ")); client.print(welcomeMessage); client.println(F(" ---"));
+  // client.println(F("220 ---   By Renzo Mischianti   ---"));
   // client.println(F("220 ---   Version " FTP_SERVER_VERSION "   ---"));
   iCL = 0;
   if (FtpServer::_callback) {
