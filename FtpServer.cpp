@@ -393,18 +393,15 @@ bool FtpServer::processCommand()
   else if( CommandIs( "FEAT" ))
   {
     client.println(F("211-Features:"));
-    if(cmdStage == FTP_Cmd)
-    {
-        client.println(F(" MLST type*;modify*;size*;") );
-        client.println(F(" MLSD") );
-        client.println(F(" MDTM") );
-        client.println(F(" MFMT") );
+    client.println(F(" MLST type*;modify*;size*;") );
+    client.println(F(" MLSD") );
+    client.println(F(" MDTM") );
+    client.println(F(" MFMT") );
 #ifdef UTF8_SUPPORT
         client.println(F(" UTF8") );
 #endif
-        client.println(F(" SIZE") );
-        client.println(F(" SITE FREE") );
-    }
+    client.println(F(" SIZE") );
+    client.println(F(" SITE FREE") );
     client.println(F("211 End") );
     DEBUG_PRINTLN(F("211 FEAT End.") );
  }
@@ -424,11 +421,6 @@ bool FtpServer::processCommand()
     DEBUG_PRINTLN(F("215 ESP"));
     client.println(F("215 ESP"));
 //    FtpOutCli << F("215 ESP") << endl;
-  }
-  else if( CommandIs( "PWD" ))
-  {
-	  DEBUG_PRINTLN( F("257 /") );
-	  client.println( F("257 /") );
   }
   //
   //  Unrecognized commands at stage of authentication
@@ -450,12 +442,15 @@ bool FtpServer::processCommand()
   //  PWD - Print Directory
   //
   else if( CommandIs( "PWD" ) ||
-           ( CommandIs( "CWD" ) && ParameterIs( "." ))) {
-	  client.print( F("257 \"")); client.print( cwdName ); client.print( F("\"") ); client.println( F(" is your current directory") );
+           ( CommandIs( "CWD" ) && ParameterIs( "." )))
+      {
+      	DEBUG_PRINTLN(String(F("PWD: cwdName: '")) + String(cwdName) + "'");
+      	client.printf("257 \"%s\"is your current directory \r\n", cwdName);
+      }
   //
   //  CDUP - Change to Parent Directory 
   //
-  } else if( CommandIs( "CDUP" ) ||
+  else if( CommandIs( "CDUP" ) ||
            ( CommandIs( "CWD" ) && ParameterIs( ".." )))
   {
     bool ok = false;
@@ -656,12 +651,13 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "LIST" ) || CommandIs( "NLST" ) || CommandIs( "MLSD" ))
   {
-	DEBUG_PRINT("List of file!!");
+	DEBUG_PRINTLN("MLSD: List files");
 
-    if( dataConnect()){
+    if( dataConnect())
+    {
       if( openDir( & dir ))
       {
-    	DEBUG_PRINT("Dir opened!!");
+    	DEBUG_PRINTLN("MLSD: Dir opened!!");
 
         nbMatch = 0;
         if( CommandIs( "LIST" ))
@@ -672,9 +668,13 @@ bool FtpServer::processCommand()
           transferStage = FTP_Mlsd;
       }
       else {
-    	  DEBUG_PRINT("List Data stop!!");
+    	  DEBUG_PRINTLN("MLSD: Could not open starting dir.");
     	  data.stop();
       }
+    }
+    else
+    {
+    	DEBUG_PRINTLN("MLSD: Not Connected. Abort");
     }
   }
   //
@@ -1062,7 +1062,7 @@ bool FtpServer::dataConnected()
   transferStage = FTP_Close;
   return false;
 }
- 
+
 bool FtpServer::openDir( FTP_DIR * pdir )
 {
   bool openD;
@@ -1134,12 +1134,18 @@ bool FtpServer::openDir( FTP_DIR * pdir )
       client.print( F("550 Can't open directory ") ); client.println( cwdName );
     }
 #else
-  if( cwdName == 0 ) {
-    openD = pdir->open( "/" );
-  } else {
-    openD = pdir->open( cwdName );
+  if( cwdName == 0x00 )
+  {
+    cwdName[0] = '/';
+    cwdName[1] = 0x00;
   }
-  if( ! openD ) {
+
+  DEBUG_PRINTLN(String("cwdName: ") + String(cwdName));
+  openD = pdir->open( cwdName );
+
+  if( ! openD )
+  {
+    DEBUG_PRINTLN( F("550 Can't open directory ") );
     client.print( F("550 Can't open directory ") ); client.println( cwdName );
   }
 #endif
@@ -1510,10 +1516,10 @@ bool FtpServer::doMlsd()
 #if STORAGE_TYPE != STORAGE_SPIFFS && STORAGE_TYPE != STORAGE_LITTLEFS && STORAGE_TYPE != STORAGE_SEEED_SD
   dir.close();
 #endif
-  	DEBUG_PRINTLN(F("Not connected!!"));
+  	DEBUG_PRINTLN(F("doMlsd: Not connected. Aborting"));
     return false;
   }
-  DEBUG_PRINTLN(F("Connected!!"));
+  DEBUG_PRINTLN(F("doMlsd: Connected!!"));
 
 #if STORAGE_TYPE == STORAGE_SPIFFS
 	  DEBUG_PRINTLN("DIR MLSD ");
@@ -1719,7 +1725,11 @@ bool FtpServer::doMlsd()
 		  DEBUG_PRINT( F("Type=") ); DEBUG_PRINT( ( file.isDir() ? F("dir") : F("file")) );
 		  DEBUG_PRINT( F(";Modify=") ); DEBUG_PRINT( makeDateTimeStr( dtStr, filelwd, filelwt ) );
 		  DEBUG_PRINT( F(";Size=") ); DEBUG_PRINT( long( fileSize( file )) ); DEBUG_PRINT( F("; ") );
-//		  DEBUG_PRINT(file.name());
+          char entryName[256];
+          memset(entryName, 0x0, sizeof(entryName));
+          file.getName(entryName, sizeof(entryName)-1);
+		  DEBUG_PRINT(entryName);
+
 		  DEBUG_PRINTLN();
       nbMatch ++;
     }
@@ -1733,7 +1743,7 @@ bool FtpServer::doMlsd()
     dir.close();
 #endif
   data.stop();
-  DEBUG_PRINTLN(F("All file read!!"));
+  DEBUG_PRINTLN(F("doMlsd: All files read!!"));
   return false;
 }
 
