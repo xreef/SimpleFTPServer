@@ -489,7 +489,7 @@
 	#define DEBUG_PRINTLN(...) {}
 #endif
 
-#define FTP_CMD_PORT 21           // Command port on wich server is listening
+#define FTP_CMD_PORT 21           // Command port on which server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
@@ -514,8 +514,8 @@ enum ftpTransfer { FTP_Close = 0, // In this stage, close data channel
                    FTP_Nlst,      //  list of name of files
                    FTP_Mlsd };    //  listing for machine processing
 
-enum ftpDataConn { FTP_NoConn = 0,// No data connexion
-                   FTP_Pasive,    // Pasive type
+enum ftpDataConn { FTP_NoConn = 0,// No data connection
+                   FTP_Pasive,    // Passive type
                    FTP_Active };  // Active type
 
 enum FtpOperation {
@@ -596,17 +596,17 @@ private:
 #endif
   int8_t  readChar();
 
-  const char* getFileName(FTP_FILE *file){
+  const String getFileName(FTP_FILE *file){
 	#if STORAGE_TYPE <= STORAGE_SDFAT2
 	  int max_characters = 100;
 	  char f_name[max_characters];
-	  file->getName(f_name, max_characters);
+	  file->getName(f_name, sizeof(f_name));
 	  String filename = String(f_name);
-	    return filename.c_str();
+	    return filename;
 	#elif STORAGE_TYPE == STORAGE_FATFS
-	  return file->fileName();
+	  return String(file->fileName());
 	#else
-	  return file->name();
+	  return String(file->name());
 	#endif
   }
   bool     exists( const char * path ) {
@@ -650,7 +650,7 @@ private:
 #endif
 //  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
 //  bool openFile( const char * path, const char * readType );
-  uint32_t fileSize( FTP_FILE file );
+  uint32_t fileSize( FTP_FILE & file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
 #if ESP8266 || ARDUINO_ARCH_RP2040
@@ -728,9 +728,9 @@ private:
   FTP_FILE     file;
   FTP_DIR      dir;
 
-  ftpCmd      cmdStage;               // stage of ftp command connexion
-  ftpTransfer transferStage;          // stage of data connexion
-  ftpDataConn dataConn;               // type of data connexion
+  ftpCmd      cmdStage;               // stage of ftp command connection
+  ftpTransfer transferStage;          // stage of data connection
+  ftpDataConn dataConn;               // type of data connection
 
   bool anonymousConnection = false;
 
