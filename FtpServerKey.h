@@ -18,7 +18,7 @@
 #define FTP_SERVER_CONFIG_H
 
 // Uncomment to enable printing out nice debug messages.
-// #define FTP_SERVER_DEBUG
+ #define FTP_SERVER_DEBUG
 // #define FTP_ADDITIONAL_DEBUG
 
 // Define where debug output will be printed.
@@ -42,7 +42,7 @@
 #define NETWORK_ETHERNET		(4)		// Standard Arduino Ethernet library
 #define NETWORK_ENC28J60 		(5) 	// UIPEthernet library
 #define NETWORK_ESP32 			(6) 	// Standard WiFi library
-#define NETWORK_RP2040_WIFI		(6) 	// Raspberry Pi Pico W standard WiFi library
+#define NETWORK_RP2040_WIFI		(15) 	// Raspberry Pi Pico W standard WiFi library
 #define NETWORK_ESP32_ETH 		(7)		// Standard ETH library
 #define NETWORK_WiFiNINA 		(8)		// Standard WiFiNINA library
 #define NETWORK_SEEED_RTL8720DN (9) 	// Standard SEED WiFi library

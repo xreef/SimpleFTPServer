@@ -20,6 +20,7 @@
  *   MDTM, MFMT
  *   FEAT, SIZE
  *   SITE FREE
+ *   SYST
  *   HELP
  *
  * Tested with those clients:
@@ -110,7 +111,7 @@ void FtpServer::end()
         disconnectClient();
     }
 
-#if FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32 && !defined(ARDUINO_ARCH_RP2040)
+#if FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32 // && !defined(ARDUINO_ARCH_RP2040)
     ftpServer.end();
     dataServer.end();
 #endif
@@ -262,6 +263,7 @@ uint8_t FtpServer::handleFTP() {
 			}
 		} else if (cmdStage > FTP_Client
 				&& !((int32_t) (millisEndConnection - millis()) > 0)) {
+			DEBUG_PRINTLN(F("530 Timeout"));
 			client.println(F("530 Timeout"));
 			millisDelay = millis() + 200;       // delay of 200 ms
 			cmdStage = FTP_Stop;
@@ -355,6 +357,7 @@ bool FtpServer::processCommand()
     }
     else
     {
+      DEBUG_PRINTLN(F("530 ") );
       client.println(F("530 ") );
       cmdStage = FTP_Stop;
     }
@@ -364,6 +367,9 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "PASS" ))
   {
+	  DEBUG_PRINT(F("PASS: ")) DEBUG_PRINTLN(pass);
+	  DEBUG_PRINT(F("PASS PARAM: ")) DEBUG_PRINTLN(parameter);
+	  DEBUG_PRINT(F("PASS OK: ")) DEBUG_PRINTLN(strcmp( parameter, pass ));
     if( cmdStage != FTP_Pass )
     {
       client.println(F("503 ") );
@@ -378,7 +384,7 @@ bool FtpServer::processCommand()
     }
     else
     {
-    	client.println( F("530 ") );
+    	client.println( F("530 Wrong password!") );
       cmdStage = FTP_Stop;
     }
   }
@@ -402,8 +408,18 @@ bool FtpServer::processCommand()
   //
   //  AUTH - Not implemented
   //
-  else if( CommandIs( "AUTH" ))
+  else if( CommandIs( "AUTH" )) {
     client.println(F("502 ") );
+  }
+  //
+  //  SYST - System
+  //
+  else if( CommandIs( "SYST" ))
+  {
+    DEBUG_PRINTLN(F("215 ESP"));
+    client.println(F("215 ESP"));
+//    FtpOutCli << F("215 ESP") << endl;
+  }
   //
   //  Unrecognized commands at stage of authentication
   //
@@ -511,7 +527,7 @@ bool FtpServer::processCommand()
     DEBUG_PRINT( int( dataIp[0]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[1]) ); DEBUG_PRINT( F(".") );
     DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINTLN( int( dataIp[3]) );
 
-#if !defined(ARDUINO_ARCH_RP2040) && ((FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_ASYNC) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP32)) // || 	(FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_WiFiNINA)  || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN))
+#if ((FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_ASYNC) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266) || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP32)) // || 	(FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_WiFiNINA)  || (FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN))
     if (dataIp.toString() ==  F("0.0.0.0")) {
     	dataIp = NET_CLASS.softAPIP();
     }

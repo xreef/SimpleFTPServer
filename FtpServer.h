@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.7 (2023-10-17)"
+#define FTP_SERVER_VERSION "2.1.8 (2024-07-17)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -114,6 +114,8 @@
 		#define FTP_CLIENT_NETWORK_CLASS WiFiClient
 		//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
 		#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+
+		#define NET_CLASS WiFi
 	#elif defined(ESP31B)
 		#include <ESP31BWiFi.h>
 
@@ -201,7 +203,7 @@
 	#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
 	#define NET_CLASS Ethernet
 
-#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32)
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32) || (FTP_SERVER_NETWORK_TYPE == NETWORK_RP2040_WIFI)
 
 	#include <WiFi.h>
 	//#include <WiFiClientSecure.h>
