@@ -488,6 +488,7 @@
 	#define DEBUG_PRINT(...) {}
 	#define DEBUG_PRINTLN(...) {}
 #endif
+#define DEBUG_IDX DEBUG_PRINTLN(idx);
 
 #define FTP_CMD_PORT 21           // Command port on which server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
@@ -544,7 +545,7 @@ enum FtpTransferOperation {
 class FtpServer
 {
 public:
-  FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV );
+    FtpServer( uint16_t _cmdPort = FTP_CMD_PORT, uint16_t _pasvPort = FTP_DATA_PORT_PASV, uint8_t _maxSessions = FTP_MAX_SESSIONS );
 
   void    begin( const char * _user, const char * _pass, const char * welcomeMessage = "Welcome to Simply FTP server" );
   void    begin( const char * welcomeMessage = "Welcome to Simply FTP server" );
@@ -552,7 +553,8 @@ public:
   void 	  end();
   void 	  setLocalIp(IPAddress localIp);
   void    credentials( const char * _user, const char * _pass );
-  uint8_t handleFTP();
+    void	  handleFTP();
+    uint8_t getMaxSessions();
 
 	void setCallback(void (*_callbackParam)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) )
 	{
@@ -565,6 +567,8 @@ public:
 	}
 
 private:
+  void	  _handleFTP();
+
   void (*_callback)(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){};
   void (*_transferCallback)(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){};
 
@@ -716,10 +720,10 @@ private:
 #endif
 	}
 
-  IPAddress   localIp;                // IP address of server as seen by clients
+	static IPAddress   localIp;                // IP address of server as seen by clients
   IPAddress   dataIp;                 // IP address of client for data
-  FTP_SERVER_NETWORK_SERVER_CLASS  ftpServer;
-  FTP_SERVER_NETWORK_SERVER_CLASS  dataServer;
+    static FTP_SERVER_NETWORK_SERVER_CLASS *  ftpServer;
+    static FTP_SERVER_NETWORK_SERVER_CLASS *  dataServer;
 
 
   FTP_CLIENT_NETWORK_CLASS  client;
@@ -732,22 +736,22 @@ private:
   ftpTransfer transferStage;          // stage of data connection
   ftpDataConn dataConn;               // type of data connection
 
-  bool anonymousConnection = false;
+  static bool anonymousConnection;
 
   uint8_t  __attribute__((aligned(4))) // need to be aligned to 32bit for Esp8266 SPIClass::transferBytes()
            buf[ FTP_BUF_SIZE ];       // data buffer for transfers
   char     cmdLine[ FTP_CMD_SIZE ];   // where to store incoming char from client
   char     cwdName[ FTP_CWD_SIZE ];   // name of current directory
   char     rnfrName[ FTP_CWD_SIZE ];  // name of file for RNFR command
-  const char *   user;     // user name
-  const char *   pass;     // password
+    static const char *   user;     // user name
+    static const char *   pass;     // password
   char     command[ 5 ];              // command sent by client
   bool     rnfrCmd;                   // previous command was RNFR
   char *   parameter;                 // point to begin of parameters sent by client
-  const char *   welcomeMessage;
-  uint16_t cmdPort,
-           pasvPort,
-           dataPort;
+    static const char *   welcomeMessage;
+    static uint16_t cmdPort;
+    static uint16_t pasvPort;
+    uint16_t dataPort;
   uint16_t iCL;                       // pointer to cmdLine next incoming char
   uint16_t nbMatch;
 
@@ -755,6 +759,12 @@ private:
            millisEndConnection,       //
            millisBeginTrans,          // store time of beginning of a transaction
            bytesTransfered;           //
+
+
+    static uint8_t maxSessions;         // maximum possible ftp sessions
+    static FtpServer** sessions;        // concurrently running ftp servers
+    uint8_t idx;                        // index of this object in the sessions list
+
 };
 
 #endif // FTP_SERVER_H

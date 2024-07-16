@@ -1213,7 +1213,7 @@ bool FtpServer::doRetrieve()
     bytesTransfered += nb;
 
 	  if (FtpServer::_transferCallback) {
-		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file), bytesTransfered);
+		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file).c_str(), bytesTransfered);
 	  }
 
 // RoSchmi
@@ -1259,7 +1259,7 @@ bool FtpServer::doStore()
 
 	  if (FtpServer::_transferCallback) {
 
-		  FtpServer::_transferCallback(FTP_UPLOAD, getFileName(&file), bytesTransfered);
+		  FtpServer::_transferCallback(FTP_UPLOAD, getFileName(&file).c_str(), bytesTransfered);
 	  }
   }
   if( nb < 0 || rc == nb  ) {
@@ -1800,7 +1800,7 @@ void FtpServer::closeTransfer()
 	  DEBUG_IDX; DEBUG_PRINT( bytesTransfered / deltaT ); DEBUG_PRINTLN( F(" kbytes/s") );
 
 	  if (FtpServer::_transferCallback) {
-		  FtpServer::_transferCallback(FTP_TRANSFER_STOP, getFileName(&file), bytesTransfered);
+		  FtpServer::_transferCallback(FTP_TRANSFER_STOP, getFileName(&file).c_str(), bytesTransfered);
 	  }
 
 
@@ -1820,7 +1820,7 @@ void FtpServer::abortTransfer()
   if( transferStage != FTP_Close )
   {
 	  if (FtpServer::_transferCallback) {
-		  FtpServer::_transferCallback(FTP_TRANSFER_ERROR, getFileName(&file), bytesTransfered);
+		  FtpServer::_transferCallback(FTP_TRANSFER_ERROR, getFileName(&file).c_str(), bytesTransfered);
 	  }
 
 	  file.close();
