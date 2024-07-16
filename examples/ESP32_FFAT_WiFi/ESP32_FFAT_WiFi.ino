@@ -85,7 +85,7 @@ void setup(void){
   Serial.println(WiFi.localIP());
 
   /////FTP Setup, ensure FFAT is started before ftp;  /////////
-  Serial.print(F("Inizializing FS..."));
+  Serial.print(F("Initializing FS..."));
   if (FFat.begin(true)){
       Serial.println(F("done."));
   }else{

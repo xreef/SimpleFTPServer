@@ -110,7 +110,7 @@ void setup()
 	  Serial.println(WiFi.subnetMask());
 
 	  if (flash.begin()) {
-		  Serial.println(F("Device finded and supported!"));
+		  Serial.println(F("Device found and supported!"));
 	  } else {
 		  Serial.println(F("Problem to discover and configure device, check wiring also!"));
 		  while(1) yield();

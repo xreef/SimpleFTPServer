@@ -20,6 +20,7 @@
  *   MDTM, MFMT
  *   FEAT, SIZE
  *   SITE FREE
+ *   SYST
  *   HELP
  *
  * Tested with those clients:
@@ -312,6 +313,7 @@ void FtpServer::_handleFTP() {
 			}
 		} else if (cmdStage > FTP_Client
 				&& !((int32_t) (millisEndConnection - millis()) > 0)) {
+			DEBUG_PRINTLN(F("530 Timeout"));
 			client.println(F("530 Timeout"));
 			millisDelay = millis() + 200;       // delay of 200 ms
 			cmdStage = FTP_Stop;
@@ -344,8 +346,8 @@ void FtpServer::_handleFTP() {
 void FtpServer::clientConnected()
 {
   DEBUG_IDX; DEBUG_PRINTLN( F(" Client connected!") );
-  client.print(F("220---")); client.print(FtpServer::welcomeMessage); client.println(F(" ---"));
-  client.println(F("220---   By Renzo Mischianti   ---"));
+  client.print(F("220 --- ")); client.print(FtpServer::welcomeMessage); client.println(F(" ---"));
+  client.println(F("220 ---   By Renzo Mischianti   ---"));
   client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
   iCL = 0;
   if (FtpServer::_callback) {
@@ -408,6 +410,7 @@ bool FtpServer::processCommand()
     }
     else
     {
+      DEBUG_PRINTLN(F("530 ") );
       client.println(F("530 ") );
       cmdStage = FTP_Stop;
     }
@@ -417,6 +420,9 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "PASS" ))
   {
+	  DEBUG_PRINT(F("PASS: ")) DEBUG_PRINTLN(pass);
+	  DEBUG_PRINT(F("PASS PARAM: ")) DEBUG_PRINTLN(parameter);
+	  DEBUG_PRINT(F("PASS OK: ")) DEBUG_PRINTLN(strcmp( parameter, pass ));
     if( cmdStage != FTP_Pass )
     {
       client.println(F("503 ") );
@@ -431,7 +437,7 @@ bool FtpServer::processCommand()
     }
     else
     {
-    	client.println( F("530 ") );
+    	client.println( F("530 Wrong password!") );
       cmdStage = FTP_Stop;
     }
   }
@@ -440,7 +446,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "FEAT" ))
   {
-    client.println(F("211-Extensions suported:"));
+    client.println(F("211-Extensions supported:"));
     client.println(F(" MLST type*;modify*;size*;") );
     client.println(F(" MLSD") );
     client.println(F(" MDTM") );
@@ -455,8 +461,18 @@ bool FtpServer::processCommand()
   //
   //  AUTH - Not implemented
   //
-  else if( CommandIs( "AUTH" ))
+  else if( CommandIs( "AUTH" )) {
     client.println(F("502 ") );
+  }
+  //
+  //  SYST - System
+  //
+  else if( CommandIs( "SYST" ))
+  {
+    DEBUG_PRINTLN(F("215 ESP"));
+    client.println(F("215 ESP"));
+//    FtpOutCli << F("215 ESP") << endl;
+  }
   //
   //  Unrecognized commands at stage of authentication
   //
@@ -544,7 +560,7 @@ bool FtpServer::processCommand()
     if( ParameterIs( "S" )) {
       client.println(F("200 S Ok") );
     } else {
-      client.println(F("504 Only S(tream) is suported") );
+      client.println(F("504 Only S(tream) is supported") );
     }
   }
   //
@@ -629,7 +645,7 @@ bool FtpServer::processCommand()
     // else if( ParameterIs( "R" ))
     //  client.println(F("200 B Ok") );
     }else{
-      client.println(F("504 Only F(ile) is suported") );
+      client.println(F("504 Only F(ile) is supported") );
     }
   }
   //
@@ -642,7 +658,7 @@ bool FtpServer::processCommand()
     } else if( ParameterIs( "I" )) {
       client.println(F("200 TYPE is now 8-bit binary") );
     } else {
-      client.println(F("504 Unknow TYPE") );
+      client.println(F("504 Unknown TYPE") );
     }
   }
 
@@ -752,8 +768,8 @@ bool FtpServer::processCommand()
       client.println(F("200 OK, UTF8 ON") );
       DEBUG_IDX; DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
     } else {
-      client.println(F("504 Unknow OPTS") );
-      DEBUG_IDX; DEBUG_PRINTLN(F("504 Unknow OPTS") );
+      client.println(F("504 Unknown OPTS") );
+      DEBUG_IDX; DEBUG_PRINTLN(F("504 Unknown OPTS") );
     }
   }
   //
@@ -1034,14 +1050,14 @@ bool FtpServer::processCommand()
       }
     }
     else {
-    	client.print( F("500 Unknow SITE command ") ); client.println( parameter );
+    	client.print( F("500 Unknown SITE command ") ); client.println( parameter );
     }
   }
   //
   //  Unrecognized commands ...
   //
   else
-    client.println(F("500 Unknow command") );
+    client.println(F("500 Unknown command") );
   return true;
 }
 
@@ -1266,7 +1282,7 @@ void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const ch
 		data->print( long( 4096 ) );
 		data->print( F("\t") );
 
-        DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
+		DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
 		DEBUG_PRINT( user );
 		DEBUG_PRINT( F("\t") );
 
@@ -1771,7 +1787,7 @@ bool FtpServer::doMlsd()
     dir.close();
 #endif
   data.stop();
-  DEBUG_IDX; DEBUG_PRINTLN(F("All file readed!!"));
+  DEBUG_IDX; DEBUG_PRINTLN(F("All file read!!"));
   return false;
 }
 
@@ -2142,8 +2158,8 @@ char * FtpServer::makeDateTimeStr( char * tstr, uint16_t date, uint16_t time )
 }
 
 
-uint32_t FtpServer::fileSize( FTP_FILE file ) {
-#if (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC || STORAGE_TYPE == STORAGE_SEEED_SD)
+uint32_t FtpServer::fileSize( FTP_FILE & file ) {
+#if (STORAGE_TYPE == STORAGE_SDFAT2 || STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT || STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC || STORAGE_TYPE == STORAGE_SEEED_SD)
 	return file.size();
 #else
 	return file.fileSize();
@@ -2303,7 +2319,7 @@ bool FtpServer::isDir( char * path )
 //  res = file.isDirectory();
 //  DEBUG_IDX;
 //  DEBUG_PRINT(path);
-//  DEBUG_PRINT(" IS DIRECOTORY --> ");
+//  DEBUG_PRINT(" IS DIRECTORY --> ");
 //  DEBUG_PRINTLN(res);
   return true;
 #else
@@ -2385,7 +2401,7 @@ bool FtpServer::getFileModTime( uint16_t * pdate, uint16_t * ptime )
 }
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD ||  STORAGE_TYPE == STORAGE_SD_MMC
+#if (STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && !defined(ESP32)
   bool     FtpServer::rename( const char * path, const char * newpath ){
 
 		FTP_FILE myFileIn = STORAGE_MANAGER.open(path, FILE_READ);

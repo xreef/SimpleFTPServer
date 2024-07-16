@@ -20,7 +20,7 @@
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
 
-#define FTP_SERVER_VERSION "2.1.6 (2023-02-02)"
+#define FTP_SERVER_VERSION "2.1.8 (2024-07-17)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -114,6 +114,8 @@
 		#define FTP_CLIENT_NETWORK_CLASS WiFiClient
 		//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
 		#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+
+		#define NET_CLASS WiFi
 	#elif defined(ESP31B)
 		#include <ESP31BWiFi.h>
 
@@ -201,7 +203,7 @@
 	#define FTP_SERVER_NETWORK_SERVER_CLASS EthernetServer
 	#define NET_CLASS Ethernet
 
-#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32)
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32) || (FTP_SERVER_NETWORK_TYPE == NETWORK_RP2040_WIFI)
 
 	#include <WiFi.h>
 	//#include <WiFiClientSecure.h>
@@ -487,7 +489,7 @@
 	#define DEBUG_PRINTLN(...) {}
 #endif
 
-#define FTP_CMD_PORT 21           // Command port on wich server is listening
+#define FTP_CMD_PORT 21           // Command port on which server is listening
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
@@ -512,8 +514,8 @@ enum ftpTransfer { FTP_Close = 0, // In this stage, close data channel
                    FTP_Nlst,      //  list of name of files
                    FTP_Mlsd };    //  listing for machine processing
 
-enum ftpDataConn { FTP_NoConn = 0,// No data connexion
-                   FTP_Pasive,    // Pasive type
+enum ftpDataConn { FTP_NoConn = 0,// No data connection
+                   FTP_Pasive,    // Passive type
                    FTP_Active };  // Active type
 
 enum FtpOperation {
@@ -594,17 +596,17 @@ private:
 #endif
   int8_t  readChar();
 
-  const char* getFileName(FTP_FILE *file){
+  const String getFileName(FTP_FILE *file){
 	#if STORAGE_TYPE <= STORAGE_SDFAT2
 	  int max_characters = 100;
 	  char f_name[max_characters];
-	  file->getName(f_name, max_characters);
+	  file->getName(f_name, sizeof(f_name));
 	  String filename = String(f_name);
-	    return filename.c_str();
+	    return filename;
 	#elif STORAGE_TYPE == STORAGE_FATFS
-	  return file->fileName();
+	  return String(file->fileName());
 	#else
-	  return file->name();
+	  return String(file->name());
 	#endif
   }
   bool     exists( const char * path ) {
@@ -627,7 +629,7 @@ private:
   bool     removeDir( const char * path ) { return STORAGE_MANAGER.rmdir( path ); };
 #endif
 
-#if STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
+#if (STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && !defined(ESP32)
   bool     rename( const char * path, const char * newpath );
 #else
   bool     rename( const char * path, const char * newpath ) { return STORAGE_MANAGER.rename( path, newpath ); };
@@ -648,7 +650,7 @@ private:
 #endif
 //  bool openFile( char path[ FTP_CWD_SIZE ], const char * readType );
 //  bool openFile( const char * path, const char * readType );
-  uint32_t fileSize( FTP_FILE file );
+  uint32_t fileSize( FTP_FILE & file );
 
 #if STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS
 #if ESP8266 || ARDUINO_ARCH_RP2040
@@ -726,9 +728,9 @@ private:
   FTP_FILE     file;
   FTP_DIR      dir;
 
-  ftpCmd      cmdStage;               // stage of ftp command connexion
-  ftpTransfer transferStage;          // stage of data connexion
-  ftpDataConn dataConn;               // type of data connexion
+  ftpCmd      cmdStage;               // stage of ftp command connection
+  ftpTransfer transferStage;          // stage of data connection
+  ftpDataConn dataConn;               // type of data connection
 
   bool anonymousConnection = false;
 
