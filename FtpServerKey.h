@@ -112,17 +112,23 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 
 //#define SD_CS_PIN 4
 // Disconnect client after 5 minutes of inactivity (expressed in seconds)
-#define FTP_TIME_OUT  5 * 60 
+#ifndef FTP_TIME_OUT
+	#define FTP_TIME_OUT  5 * 60
+#endif
 
 
 // Wait for authentication for 10 seconds (expressed in seconds)
-#define FTP_AUTH_TIME_OUT 10
+#ifndef FTP_AUTH_TIME_OUT
+	#define FTP_AUTH_TIME_OUT 10
+#endif
 
 
 // Size of file buffer for read/write
 // Transfer speed depends of this value
 // Best value depends on many factors: SD card, client side OS, ... 
 // But it can be reduced to 512 if memory usage is critical.
-#define FTP_BUF_SIZE 1024 //2048 //1024 // 512
+#ifndef FTP_BUF_SIZE
+	#define FTP_BUF_SIZE 1024 //2048 //1024 // 512
+#endif
 
 #endif // FTP_SERVER_CONFIG_H
