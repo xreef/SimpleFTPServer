@@ -340,7 +340,11 @@
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
 	#endif
-	#define FILENAME_LENGTH 32
+	#ifdef ESP8266
+		#define FILENAME_LENGTH 32
+	#else
+		#define FILENAME_LENGTH 255
+	#endif
 #elif(STORAGE_TYPE == STORAGE_SD)
 	#include <SPI.h>
 	#include <SD.h>

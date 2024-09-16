@@ -16,6 +16,7 @@
  - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
+- 2024-09-16 2.1.9 Fix LittleFS filename size.
 - 2024-07-16 2.1.8 Add SYST command.
 - 2023-10-07 2.1.7 Fix ESP32 rename on SD (thanks @scuba-hacker) #44
 - 2023-02-02 2.1.6 Fix esp8266 Ethernet (w5x00) issue and explain solution for ESP32 Ethernet (w5x00), add new Networks management
