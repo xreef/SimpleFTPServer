@@ -340,7 +340,7 @@
 		#define FTP_FILE_WRITE_APPEND "a"
 		#define FTP_FILE_WRITE_CREATE "w"
 	#endif
-	#define FILENAME_LENGTH 32
+	#define FILENAME_LENGTH 255
 #elif(STORAGE_TYPE == STORAGE_SD)
 	#include <SPI.h>
 	#include <SD.h>
