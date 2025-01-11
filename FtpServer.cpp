@@ -559,10 +559,19 @@ bool FtpServer::processCommand()
     DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[3]) );
     DEBUG_PRINT( F(":") ); DEBUG_PRINTLN( dataPort );
 
-    client.print( F("227 Entering Passive Mode") ); client.print( F(" (") );
-    client.print( int( dataIp[0]) ); client.print( F(",") ); client.print( int( dataIp[1]) ); client.print( F(",") );
-    client.print( int( dataIp[2]) ); client.print( F(",") ); client.print( int( dataIp[3]) ); client.print( F(",") );
-    client.print( ( dataPort >> 8 ) ); client.print( F(",") ); client.print( ( dataPort & 255 ) ); client.println( F(")") );
+//    client.print( F("227 Entering Passive Mode") ); client.print( F(" (") );
+//    client.print( int( dataIp[0]) ); client.print( F(",") ); client.print( int( dataIp[1]) ); client.print( F(",") );
+//    client.print( int( dataIp[2]) ); client.print( F(",") ); client.print( int( dataIp[3]) ); client.print( F(",") );
+//    client.print( ( dataPort >> 8 ) ); client.print( F(",") ); client.print( ( dataPort & 255 ) ); client.println( F(")") );
+
+      char buffer[64]; // Assicurati che sia abbastanza grande per contenere il messaggio
+      snprintf(buffer, sizeof(buffer),
+               "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)",
+               int(dataIp[0]), int(dataIp[1]), int(dataIp[2]), int(dataIp[3]),
+               dataPort >> 8, dataPort & 255);
+
+      client.println(buffer);
+
     dataConn = FTP_Pasive;
   }
   //
