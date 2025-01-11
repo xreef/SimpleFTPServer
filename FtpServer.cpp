@@ -1060,7 +1060,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 {
   bool openD;
 #if (STORAGE_TYPE == STORAGE_LITTLEFS && (defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)))
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
     dir = STORAGE_MANAGER.openDir( "/" );
   } else {
     dir = STORAGE_MANAGER.openDir( cwdName );
@@ -1071,7 +1071,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
     client.print( F("550 Can't open directory ") ); client.println( cwdName );
   }
 #elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
 	    dir = STORAGE_MANAGER.open( cwdName );
@@ -1081,7 +1081,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
 #elif STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))
-	  if( cwdName == 0 ) {
+	 if( strlen( cwdName ) == 0 ){
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
 	    dir = STORAGE_MANAGER.open( cwdName );
@@ -1091,7 +1091,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
 #elif STORAGE_TYPE == STORAGE_SEEED_SD
-	  if( cwdName == 0 ) {
+	 if( strlen( cwdName ) == 0 ){
 	  	  DEBUG_PRINT("cwdName forced -> ");
 	  	  DEBUG_PRINTLN(cwdName );
 
@@ -1127,7 +1127,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
       client.print( F("550 Can't open directory ") ); client.println( cwdName );
     }
 #else
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
     openD = pdir->open( "/" );
   } else {
     openD = pdir->open( cwdName );
