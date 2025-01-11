@@ -421,6 +421,22 @@ bool FtpServer::processCommand()
 //    FtpOutCli << F("215 ESP") << endl;
   }
   //
+#ifdef UTF8_SUPPORT
+  //  OPTS
+  //
+  else if( CommandIs( "OPTS" )) {
+    if( ParameterIs( "UTF8 ON" ) || ParameterIs( "utf8 on" )) {
+      client.println(F("200 OK, UTF8 ON") );
+      DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
+    } else {
+      client.println(F("504 Unknown OPTS") );
+      DEBUG_PRINTLN(F("504 Unknown OPTS") );
+    }
+  }
+  //
+#endif
+
+  //
   //  Unrecognized commands at stage of authentication
   //
   else if( cmdStage < FTP_Cmd )
@@ -703,21 +719,6 @@ bool FtpServer::processCommand()
   else if( CommandIs( "NOOP" )) {
     client.println(F("200 Zzz...") );
   }
-  //
-#ifdef UTF8_SUPPORT
-  //  OPTS
-  //
-  else if( CommandIs( "OPTS" )) {
-    if( ParameterIs( "UTF8 ON" ) || ParameterIs( "utf8 on" )) {
-      client.println(F("200 OK, UTF8 ON") );
-      DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
-    } else {
-      client.println(F("504 Unknown OPTS") );
-      DEBUG_PRINTLN(F("504 Unknown OPTS") );
-    }
-  }
-  //
-#endif
   //  HELP
   //
   else if( CommandIs( "HELP" )) {
