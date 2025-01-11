@@ -1,6 +1,6 @@
 {
-	"name": "SimpleFTPServer",
-	"description": "Simple FTP Server for using esp8266, esp32, STM32, Arduino",
+	"name": "MultiFTPServer",
+	"description": "Multi FTP server for using esp8266, esp32, STM32, Arduino",
 	"keywords": "arduino, esp8266, esp32, stm32, rp2040, Raspberry Pi, ftp, FtpServer, spiffs, Fat, LittleFS, Ethernet, WiFi, WiFiNINA",
 	"homepage": "https://www.mischianti.org/category/my-libraries/simple-ftp-server/",
 	"authors":
@@ -12,10 +12,10 @@
 	"repository":
 	{
 		"type": "git",
-		"url": "https://github.com/xreef/SimpleFTPServer"
+		"url": "https://github.com/xreef/MultiFTPServer"
 	},
 	"url": "https://www.mischianti.org",
 	"frameworks": "Arduino",
-    "version": "2.1.8",
+    "version": "2.1.10",
 	"platforms": "*"
 }

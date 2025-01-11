@@ -11,7 +11,7 @@
 #include <Ethernet.h>
 #include "SD.h"
 
-#include <SimpleFtpServer.h>
+#include <MultiFTPServer.h>
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield

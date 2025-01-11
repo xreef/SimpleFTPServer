@@ -11,7 +11,7 @@
 #include "FS.h"
 #include "FFat.h"
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 #ifdef STA_MODE
 	const char* ssid = "<YOUR-SSID>";

@@ -1,5 +1,5 @@
 /**
- * SimpleFTPServer ^1.3.0 on STM32 (need FLASH > 64K)
+ * MultiFTPServer ^1.3.0 on STM32 (need FLASH > 64K)
  * and ethernet w5500
  * SD connected on secondary SPI or primary
  *
@@ -20,7 +20,7 @@
  */
 #include <SdFat.h>
 #include <sdios.h>
-#include <SimpleFtpServer.h>
+#include <MultiFTPServer.h>
 #include <EthernetEnc.h>
 
 // Ethernet CS

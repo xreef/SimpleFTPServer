@@ -10,7 +10,7 @@
 #include <WiFi.h>
 #include "SD.h"
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 const char* ssid = "<YOUR-SSID>";
 const char* password = "<YOUR-PASSWD>";

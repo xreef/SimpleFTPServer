@@ -11,7 +11,7 @@
 #include "FS.h"
 #include "FFat.h"
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 const char* ssid = "<YOUR-SSID>";
 const char* password = "<YOUR-PASSWD>";

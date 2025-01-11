@@ -14,7 +14,7 @@
 #include "SdFat.h"
 #include "Adafruit_SPIFlash.h"
 #include <WiFi.h>
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 Adafruit_FlashTransport_SPI flashTransport(SS, SPI); // Set CS and SPI interface
 Adafruit_SPIFlash flash(&flashTransport);

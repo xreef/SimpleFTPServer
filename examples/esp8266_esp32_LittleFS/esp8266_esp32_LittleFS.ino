@@ -16,7 +16,7 @@
 #include <LittleFS.h>
 #endif
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 const char* ssid = "<YOUR-SSID>";
 const char* password = "<YOUR-PASSWD>";

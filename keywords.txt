@@ -2,7 +2,7 @@
 # Datatypes (KEYWORD1)
 #######################################
 
-SimpleFtpServer	KEYWORD1
+MultiFTPServer	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

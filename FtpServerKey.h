@@ -66,7 +66,7 @@
 // esp32 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP32 		NETWORK_ESP32
-	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_FFAT
+	#define DEFAULT_STORAGE_TYPE_ESP32 					STORAGE_SD
 	/**
 To use Ethernet.h with esp32 fix would be to change in Ethernet.h the line
 class EthernetServer : public Server {
@@ -118,20 +118,27 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 
 //#define SD_CS_PIN 4
 // Disconnect client after 5 minutes of inactivity (expressed in seconds)
-#define FTP_TIME_OUT  5 * 60 
+#ifndef FTP_TIME_OUT
+	#define FTP_TIME_OUT  5 * 60
+#endif
 
 
 // Wait for authentication for 10 seconds (expressed in seconds)
-#define FTP_AUTH_TIME_OUT 10
+#ifndef FTP_AUTH_TIME_OUT
+	#define FTP_AUTH_TIME_OUT 10
+#endif
 
 
 // Size of file buffer for read/write
 // Transfer speed depends of this value
 // Best value depends on many factors: SD card, client side OS, ... 
 // But it can be reduced to 512 if memory usage is critical.
-#define FTP_BUF_SIZE 1024 //2048 //1024 // 512
-
+#ifndef FTP_BUF_SIZE
+	#define FTP_BUF_SIZE 1024 //2048 //1024 // 512
+#endif
 // Define the maximum number of concurrent sessions
-#define FTP_MAX_SESSIONS 2
+#ifndef FTP_MAX_SESSIONS
+    #define FTP_MAX_SESSIONS 2
+#endif
 
 #endif // FTP_SERVER_CONFIG_H

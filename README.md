@@ -1,13 +1,13 @@
-# SimpleFTPServer
+# MultiFTPServer
 
 [All articles and information](https://www.mischianti.org/category/my-libraries/simple-ftp-server/)
 
  - [Instruction on FTP server on esp8266 and esp32](https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32)
- - [Simple FTP Server library now with support for Wio Terminal and SD](https://www.mischianti.org/2021/07/01/simple-ftp-server-library-now-with-support-for-wio-terminal-and-sd/)
+ - [Multi FTP server library now with support for Wio Terminal and SD](https://www.mischianti.org/2021/07/01/simple-ftp-server-library-now-with-support-for-wio-terminal-and-sd/)
 
 
 
-#### Simple FTP Server for 
+#### Multi FTP server for 
  - Raspberry Pi Pico W (Flash: LittleFS) (To test SD and SdFat)
  - esp8266 (Flash: SPIFFs, LittleFS. SD: SD, SdFat 2)
  - esp32 (SPIFFS, LITTLEFS, FFAT, SD: SD, SdFat)
@@ -16,6 +16,7 @@
  - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
+- 2025-01-11 2.1.10 Minor fix and optimizations
 - 2024-09-16 2.1.9 Fix LittleFS filename size.
 - 2024-07-16 2.1.8 Add SYST command.
 - 2023-10-07 2.1.7 Fix ESP32 rename on SD (thanks @scuba-hacker) #44
@@ -75,7 +76,7 @@ On default in FtpServerKey.h the define FTP_MAX_SESSIONS is set to 2 for two con
 #include "SPIFFS.h"
 #endif
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 const char* ssid = "YOUR_SSID";
 const char* password = "YOUR_PASS";
@@ -120,4 +121,4 @@ void loop(void){
 }
 ```
 
-https://downloads.arduino.cc/libraries/logs/github.com/xreef/SimpleFTPServer/
+https://downloads.arduino.cc/libraries/logs/github.com/xreef/MultiFTPServer/

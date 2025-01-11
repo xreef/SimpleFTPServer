@@ -346,9 +346,9 @@ void FtpServer::_handleFTP() {
 void FtpServer::clientConnected()
 {
   DEBUG_IDX; DEBUG_PRINTLN( F(" Client connected!") );
-  client.print(F("220 --- ")); client.print(FtpServer::welcomeMessage); client.println(F(" ---"));
-  client.println(F("220 ---   By Renzo Mischianti   ---"));
-  client.print(F("220 --    Version ")); client.print(FTP_SERVER_VERSION); client.println(F("    --"));
+  client.print  (F("220--- ")); client.print(FtpServer::welcomeMessage); client.println(F(" ---"));
+  client.println(F("    --   By Renzo Mischianti   --"));
+  client.print  (F("220 --   Version ")); client.print(FTP_SERVER_VERSION); client.println(F("   --"));
   iCL = 0;
   if (FtpServer::_callback) {
 	  FtpServer::_callback(FTP_CONNECT, free(), capacity());
@@ -473,6 +473,22 @@ bool FtpServer::processCommand()
     client.println(F("215 ESP"));
 //    FtpOutCli << F("215 ESP") << endl;
   }
+  //
+#ifdef UTF8_SUPPORT
+  //  OPTS
+  //
+  else if( CommandIs( "OPTS" )) {
+    if( ParameterIs( "UTF8 ON" ) || ParameterIs( "utf8 on" )) {
+      client.println(F("200 OK, UTF8 ON") );
+      DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
+    } else {
+      client.println(F("504 Unknown OPTS") );
+      DEBUG_PRINTLN(F("504 Unknown OPTS") );
+    }
+  }
+  //
+#endif
+
   //
   //  Unrecognized commands at stage of authentication
   //
@@ -599,10 +615,19 @@ bool FtpServer::processCommand()
     DEBUG_PRINT( int( dataIp[2]) ); DEBUG_PRINT( F(".") ); DEBUG_PRINT( int( dataIp[3]) );
     DEBUG_PRINT( F(":") ); DEBUG_PRINTLN( dataPort );
 
-    client.print( F("227 Entering Passive Mode") ); client.print( F(" (") );
-    client.print( int( dataIp[0]) ); client.print( F(",") ); client.print( int( dataIp[1]) ); client.print( F(",") );
-    client.print( int( dataIp[2]) ); client.print( F(",") ); client.print( int( dataIp[3]) ); client.print( F(",") );
-    client.print( ( dataPort >> 8 ) ); client.print( F(",") ); client.print( ( dataPort & 255 ) ); client.println( F(")") );
+//    client.print( F("227 Entering Passive Mode") ); client.print( F(" (") );
+//    client.print( int( dataIp[0]) ); client.print( F(",") ); client.print( int( dataIp[1]) ); client.print( F(",") );
+//    client.print( int( dataIp[2]) ); client.print( F(",") ); client.print( int( dataIp[3]) ); client.print( F(",") );
+//    client.print( ( dataPort >> 8 ) ); client.print( F(",") ); client.print( ( dataPort & 255 ) ); client.println( F(")") );
+
+      char buffer[64]; // Assicurati che sia abbastanza grande per contenere il messaggio
+      snprintf(buffer, sizeof(buffer),
+               "227 Entering Passive Mode (%d,%d,%d,%d,%d,%d)",
+               int(dataIp[0]), int(dataIp[1]), int(dataIp[2]), int(dataIp[3]),
+               dataPort >> 8, dataPort & 255);
+
+      client.println(buffer);
+
     dataConn = FTP_Pasive;
   }
   //
@@ -728,11 +753,11 @@ bool FtpServer::processCommand()
   else if( CommandIs( "MLST" ))
   {
     char path[ FTP_CWD_SIZE ];
-    uint16_t dat = 0, tim = 0;
+    uint16_t dat=0, tim=0;
     char dtStr[ 15 ];
     bool isdir;
     if( haveParameter() && makeExistsPath( path )){
-      if( ! getFileModTime( path, & dat, & tim )) {
+      if( ! getFileModTime( path, &dat, &tim )) {
         client.print( F("550 Unable to retrieve time for ") ); client.println( parameter );
       } else
       {
@@ -759,21 +784,6 @@ bool FtpServer::processCommand()
   else if( CommandIs( "NOOP" )) {
     client.println(F("200 Zzz...") );
   }
-  //
-#ifdef UTF8_SUPPORT
-  //  OPTS
-  //
-  else if( CommandIs( "OPTS" )) {
-    if( ParameterIs( "UTF8 ON" ) || ParameterIs( "utf8 on" )) {
-      client.println(F("200 OK, UTF8 ON") );
-      DEBUG_IDX; DEBUG_PRINTLN(F("200 OK, UTF8 ON") );
-    } else {
-      client.println(F("504 Unknown OPTS") );
-      DEBUG_IDX; DEBUG_PRINTLN(F("504 Unknown OPTS") );
-    }
-  }
-  //
-#endif
   //  HELP
   //
   else if( CommandIs( "HELP" )) {
@@ -1006,9 +1016,9 @@ bool FtpServer::processCommand()
         }
         else if( mdtm ) // get file modification time
         {
-          uint16_t dat = 0, tim = 0;
+          uint16_t dat=0, tim=0;
           char dtStr[ 15 ];
-          if( getFileModTime( path, & dat, & tim )) {
+          if( getFileModTime( path, &dat, &tim )) {
             client.print( F("213 ") ); client.println( makeDateTimeStr( dtStr, dat, tim ) );
           } else {
             client.println("550 Unable to retrieve time" );
@@ -1118,7 +1128,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 {
   bool openD;
 #if (STORAGE_TYPE == STORAGE_LITTLEFS && (defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)))
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
     dir = STORAGE_MANAGER.openDir( "/" );
   } else {
     dir = STORAGE_MANAGER.openDir( cwdName );
@@ -1129,7 +1139,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
     client.print( F("550 Can't open directory ") ); client.println( cwdName );
   }
 #elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
 	    dir = STORAGE_MANAGER.open( cwdName );
@@ -1139,7 +1149,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
 #elif STORAGE_TYPE == STORAGE_FFAT || (STORAGE_TYPE == STORAGE_LITTLEFS && defined(ESP32))
-	  if( cwdName == 0 ) {
+	 if( strlen( cwdName ) == 0 ){
 	    dir = STORAGE_MANAGER.open( "/" );
 	  } else {
 	    dir = STORAGE_MANAGER.open( cwdName );
@@ -1149,7 +1159,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 		client.print( F("550 Can't open directory ") ); client.println( cwdName );
 	  }
 #elif STORAGE_TYPE == STORAGE_SEEED_SD
-	  if( cwdName == 0 ) {
+	 if( strlen( cwdName ) == 0 ){
 	  	  DEBUG_IDX; DEBUG_PRINT("cwdName forced -> ");
 	  	  DEBUG_PRINTLN(cwdName );
 
@@ -1185,7 +1195,7 @@ bool FtpServer::openDir( FTP_DIR * pdir )
       client.print( F("550 Can't open directory ") ); client.println( cwdName );
     }
 #else
-  if( cwdName == 0 ) {
+ if( strlen( cwdName ) == 0 ){
     openD = pdir->open( "/" );
   } else {
     openD = pdir->open( cwdName );

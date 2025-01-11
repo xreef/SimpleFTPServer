@@ -14,7 +14,7 @@
 #include "SPIFFS.h"
 #endif
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 const char* ssid = "YOUR_SSID";
 const char* password = "YOUR_PASS";

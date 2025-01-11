@@ -14,7 +14,7 @@
 #include "FS.h"
 #include "FFat.h"
 
-#include <SimpleFTPServer.h>
+#include <MultiFTPServer.h>
 
 #define MACADDRESS 0x00,0x01,0x02,0x03,0x04,0x05
 #define MYIPADDR 192,168,1,28
