@@ -64,6 +64,52 @@ FtpServer::FtpServer( uint16_t _cmdPort, uint16_t _pasvPort )
 
 void FtpServer::begin( const char * _user, const char * _pass, const char * _welcomeMessage )
 {
+    // Debug output for network and storage type
+    DEBUG_PRINTLN(F("Initializing FTP server..."));
+    DEBUG_PRINT(F("Network Type: "));
+    #if FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC
+        DEBUG_PRINTLN(F("ESP8266 Async"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266
+        DEBUG_PRINTLN(F("ESP8266 Standard"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242
+        DEBUG_PRINTLN(F("ESP8266 Pre-2.4.2"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32
+        DEBUG_PRINTLN(F("ESP32 WiFi"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32_ETH
+        DEBUG_PRINTLN(F("ESP32 Ethernet"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA
+        DEBUG_PRINTLN(F("WiFiNINA"));
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_SEEED_RTL8720DN
+        DEBUG_PRINTLN(F("Seeed RTL8720DN"));
+    #else
+        DEBUG_PRINTLN(F("Unknown Network Type"));
+    #endif
+
+    DEBUG_PRINT(F("Storage Type: "));
+    #if STORAGE_TYPE == STORAGE_SPIFFS
+        DEBUG_PRINTLN(F("SPIFFS"));
+    #elif STORAGE_TYPE == STORAGE_FFAT
+        DEBUG_PRINTLN(F("FFAT"));
+    #elif STORAGE_TYPE == STORAGE_LITTLEFS
+        DEBUG_PRINTLN(F("LITTLEFS"));
+    #elif STORAGE_TYPE == STORAGE_SD
+        DEBUG_PRINTLN(F("SD"));
+    #elif STORAGE_TYPE == STORAGE_SD_MMC
+        DEBUG_PRINTLN(F("SD_MMC"));
+    #elif STORAGE_TYPE == STORAGE_SEEED_SD
+        DEBUG_PRINTLN(F("Seeed SD"));
+    #elif STORAGE_TYPE == STORAGE_SDFAT1
+        DEBUG_PRINTLN(F("SdFat1"));
+    #elif STORAGE_TYPE == STORAGE_SDFAT2
+        DEBUG_PRINTLN(F("SdFat2"));
+    #elif STORAGE_TYPE == STORAGE_SPIFM
+        DEBUG_PRINTLN(F("SPI Flash Memory"));
+    #elif STORAGE_TYPE == STORAGE_FATFS
+        DEBUG_PRINTLN(F("FATFS"));
+    #else
+        DEBUG_PRINTLN(F("Unknown Storage Type"));
+    #endif
+
 	if ( strcmp( _user, "anonymous" ) != 0) {
 		DEBUG_PRINTLN(F("NOT ANONYMOUS"));
 		DEBUG_PRINTLN(_user);
@@ -153,6 +199,8 @@ void FtpServer::iniVariables()
 
   rnfrCmd = false;
   transferStage = FTP_Close;
+
+  restartPos = 0;
 }
 
 uint8_t FtpServer::handleFTP() {
@@ -813,6 +861,52 @@ bool FtpServer::processCommand()
       }
     }
   }
+  ///////////////////////////////////////
+  //                                   //
+  //         REST COMMAND              //
+  //                                   //
+  ///////////////////////////////////////
+
+  // REST - Restart file transfer at a specific byte offset
+  else if (CommandIs("REST")) {
+      if (haveParameter()) {
+          restartPos = atol(parameter); // Parse the byte offset
+          client.print(F("350 Restarting at "));
+          client.print(restartPos);
+          client.println(F(". Ready to resume transfer."));
+      } else {
+          client.println(F("501 Syntax error in parameters or arguments."));
+      }
+  }
+  // STAT
+  // Display status information about a specific file or the FTP server.
+  else if (CommandIs("STAT")) {
+      if (haveParameter()) {
+          char path[FTP_CWD_SIZE];
+          if (makeExistsPath(path)) {
+              client.println(F("211-File status:"));
+              client.print(F(" Size: "));
+              client.println(fileSize(file));
+              client.println(F("211 End of status."));
+          } else {
+              client.println(F("450 File not found."));
+          }
+      } else {
+          client.println(F("211-Server status:"));
+          client.print(F(" Current directory: "));
+          client.println(cwdName);
+          client.println(F("211 End of status."));
+      }
+  }
+  // ALLO
+  else if (CommandIs("ALLO")) {
+      if (haveParameter()) {
+          client.println(F("202 ALLO command ignored; allocation is not necessary."));
+      } else {
+          client.println(F("501 Syntax error in parameters or arguments."));
+      }
+  }
+
   //
   //  MKD - Make Directory
   //
@@ -1155,6 +1249,18 @@ bool FtpServer::doRetrieve()
     file.close();
     return false;
   }
+
+  // Handle resume if REST was used
+  if (restartPos > 0) {
+      if (!file.seek(restartPos)) {
+          client.println(F("450 Cannot seek to restart position."));
+          closeTransfer();
+          return false;
+      }
+      bytesTransfered = restartPos; // Adjust the transferred bytes
+      restartPos = 0; // Reset after use
+  }
+
   int16_t nb = file.read( buf, FTP_BUF_SIZE );
   if( nb > 0 )
   {
@@ -1782,6 +1888,8 @@ void FtpServer::abortTransfer()
   }
 //  if( data.connected())
   data.stop(); 
+  restartPos = 0; // Reset restart position on abort
+
 }
 
 // Read a char from client connected to ftp server

@@ -1,96 +1,73 @@
 /*
- * FtpServer esp8266 and esp32 with SD
+ * Simple FTP Server Example with SD Card on ESP32
  *
- * AUTHOR:  Renzo Mischianti
+ * AUTHOR: Renzo Mischianti
+ * URL: https://www.mischianti.org
+ *
+ * DESCRIPTION:
+ * This example demonstrates how to use the SimpleFTPServer library
+ * with an ESP32 and an SD card module. The ESP32 connects to a WiFi network
+ * and initializes an FTP server for file transfers.
+ *
+ * FEATURES:
+ * - WiFi connection to local network
+ * - SD card initialization for file storage
+ * - FTP server setup for file uploads and downloads
  *
  * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32
  *
  */
 
 #include <WiFi.h>
-#include "SD.h"
-
 #include <SimpleFTPServer.h>
+#include <SPI.h>
+#include <SD.h>
 
-const char* ssid = "<YOUR-SSID>";
-const char* password = "<YOUR-PASSWD>";
+// WiFi credentials
+const char* WIFI_SSID = "<YOUR-SSID>";    		// Replace with your WiFi SSID
+const char* WIFI_PASSWORD = "<YOUR-PASSWD>";    // Replace with your WiFi password
 
+// SD card chip select pin
+const int CHIP_SELECT_PIN = SS;               // Default SS pin for SPI
 
-FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
+// FTP server instance
+FtpServer ftpServer;
 
-void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
-	Serial.print(">>>>>>>>>>>>>>> _callback " );
-	Serial.print(ftpOperation);
-	/* FTP_CONNECT,
-	 * FTP_DISCONNECT,
-	 * FTP_FREE_SPACE_CHANGE
-	 */
-	Serial.print(" ");
-	Serial.print(freeSpace);
-	Serial.print(" ");
-	Serial.println(totalSpace);
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(9600);
+  while (!Serial) {
+    // Wait for serial port to connect (required for native USB ports)
+  }
 
-	// freeSpace : totalSpace = x : 360
-
-	if (ftpOperation == FTP_CONNECT) Serial.println(F("CONNECTED"));
-	if (ftpOperation == FTP_DISCONNECT) Serial.println(F("DISCONNECTED"));
-};
-void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){
-	Serial.print(">>>>>>>>>>>>>>> _transferCallback " );
-	Serial.print(ftpOperation);
-	/* FTP_UPLOAD_START = 0,
-	 * FTP_UPLOAD = 1,
-	 *
-	 * FTP_DOWNLOAD_START = 2,
-	 * FTP_DOWNLOAD = 3,
-	 *
-	 * FTP_TRANSFER_STOP = 4,
-	 * FTP_DOWNLOAD_STOP = 4,
-	 * FTP_UPLOAD_STOP = 4,
-	 *
-	 * FTP_TRANSFER_ERROR = 5,
-	 * FTP_DOWNLOAD_ERROR = 5,
-	 * FTP_UPLOAD_ERROR = 5
-	 */
-	Serial.print(" ");
-	Serial.print(name);
-	Serial.print(" ");
-	Serial.println(transferredSize);
-};
-
-void setup(void){
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-  Serial.println("");
-
-  // Wait for connection
+  // Connect to WiFi network
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("\nWiFi connected!");
+  Serial.printf("Connected to: %s\n", WIFI_SSID);
+  Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
 
+  // Wait for a short delay before initializing SD card
+  delay(1000);
 
-  /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
-
-  /////FTP Setup, ensure SPIFFS is started before ftp;  /////////
-  SPI.begin(14, 12, 15, 13); //SCK, MISO, MOSI,SS
-
-  if (SD.begin(13, SPI)) {
-      Serial.println("SD opened!");
-
-      ftpSrv.setCallback(_callback);
-      ftpSrv.setTransferCallback(_transferCallback);
-
-      ftpSrv.begin("esp8266","esp8266");    //username, password for ftp.   (default 21, 50009 for PASV)
+  // Initialize SD card
+  Serial.print("Initializing SD card...");
+  while (!SD.begin(CHIP_SELECT_PIN)) {
+    delay(500);
+    Serial.print(".");
   }
-}
-void loop(void){
-  ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!
- // server.handleClient();   //example if running a webserver you still need to call .handleClient();
+  Serial.println("\nSD card initialized successfully!");
 
+  // Start FTP server with username and password
+  ftpServer.begin("user", "password"); // Replace with your desired FTP credentials
+  Serial.println("FTP server started!");
+}
+
+void loop() {
+  // Handle FTP server operations
+  ftpServer.handleFTP(); // Continuously process FTP requests
 }

@@ -15,10 +15,10 @@
  **                                                                            **
  *******************************************************************************/
 
-#include <FtpServerKey.h>
-
 #ifndef FTP_SERVER_H
 #define FTP_SERVER_H
+
+#include <FtpServerKey.h>
 
 #define FTP_SERVER_VERSION "2.1.10 (2025-01-11)"
 
@@ -758,7 +758,8 @@ private:
   uint32_t millisDelay,               //
            millisEndConnection,       //
            millisBeginTrans,          // store time of beginning of a transaction
-           bytesTransfered;           //
+           bytesTransfered,
+		   restartPos;           //
 };
 
 #endif // FTP_SERVER_H
