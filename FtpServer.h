@@ -598,7 +598,7 @@ private:
 #if STORAGE_TYPE != STORAGE_FATFS
   bool    getFileModTime( uint16_t * pdate, uint16_t * ptime );
 #endif
-  int8_t  readChar();
+  int32_t readChar();
 
   const String getFileName(FTP_FILE *file){
 	#if STORAGE_TYPE <= STORAGE_SDFAT2
