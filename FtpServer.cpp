@@ -546,7 +546,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "CWD" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ]{ 0 };
     if( haveParameter() && makeExistsPath( path ))
     {
       strcpy( cwdName, path );
@@ -704,7 +704,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "DELE" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ]{ 0 };
     if( haveParameter() && makeExistsPath( path )) {
       if( remove( path )) {
     	  if (FtpServer::_callback) {
@@ -750,7 +750,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "MLST" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ]{ 0 };
     uint16_t dat=0, tim=0;
     char dtStr[ 15 ];
     bool isdir;
@@ -803,7 +803,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "RETR" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ]{ 0 };
     if( haveParameter() && makeExistsPath( path )) {
       if( ! openFile( path, FTP_FILE_READ )) {
         client.print( F("450 Can't open ") ); client.print( parameter );
@@ -899,7 +899,7 @@ bool FtpServer::processCommand()
   // Display status information about a specific file or the FTP server.
   else if (CommandIs("STAT")) {
       if (haveParameter()) {
-          char path[FTP_CWD_SIZE];
+          char path[FTP_CWD_SIZE]{ 0 };
           if (makeExistsPath(path)) {
               client.println(F("211-File status:"));
               client.print(F(" Size: "));
@@ -955,7 +955,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "RMD" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ] { 0 };
     if( haveParameter() && makeExistsPath( path )) {
       if( removeDir( path ))
       {
@@ -1045,7 +1045,7 @@ bool FtpServer::processCommand()
   {
     if( haveParameter())
     {
-      char path[ FTP_CWD_SIZE ];
+      char path[ FTP_CWD_SIZE ]{ 0 };
       char * fname = parameter;
       uint16_t year;
       uint8_t month, day, hour, minute, second, setTime;
@@ -1084,7 +1084,7 @@ bool FtpServer::processCommand()
   //
   else if( CommandIs( "SIZE" ))
   {
-    char path[ FTP_CWD_SIZE ];
+    char path[ FTP_CWD_SIZE ]{ 0 };
     if( haveParameter() && makeExistsPath( path )) {
       if( ! openFile( path, FTP_FILE_READ )) {
         client.print( F("450 Can't open ") ); client.println( parameter );
@@ -2207,9 +2207,18 @@ bool FtpServer::makeExistsPath( char * path, char * param )
 	  DEBUG_PRINT( F(" CWD PATH: cwdName -> ") );
 	  DEBUG_PRINT(cwdName );
 	  DEBUG_PRINT( F(" - param ") );
-	  DEBUG_PRINT(param );
+
+	  if (param == nullptr)
+	  	  DEBUG_PRINT( F("nullptr") );
+	  else
+	  	  DEBUG_PRINT(param );
+
 	  DEBUG_PRINT( F(" - path ") );
-	  DEBUG_PRINTLN(path );
+
+	  if (path[0] == 0)
+        DEBUG_PRINTLN(F("not set" )); 
+    else
+        DEBUG_PRINTLN(path );
 
   if( ! makePath( path, param ))
     return false;
