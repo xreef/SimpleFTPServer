@@ -646,7 +646,7 @@ bool FtpServer::processCommand()
     dataPort = 256 * atoi( ++ p );
     p = strchr( p, ',' );
     dataPort += atoi( ++ p );
-    if( p == NULL ) {
+    if( p == nullptr ) {
       client.println(F("501 Can't interpret parameters") );
     } else
     {
@@ -999,7 +999,7 @@ bool FtpServer::processCommand()
       {
         strcpy( dirp, path );
         char * psep = strrchr( dirp, '/' );
-        bool fail = psep == NULL;
+        bool fail = psep == nullptr;
         if( ! fail )
         {
           if( psep == dirp )
@@ -1434,7 +1434,7 @@ String makeDateTimeStrList(time_t ft, bool dateContracted = false)
 
     // check for a year != year from now
     int fileYear = _tm.tm_year;
-    time_t nowTime = time(NULL);
+    time_t nowTime = time(nullptr);
     gmtime_r(&nowTime, &_tm);
     if (fileYear == _tm.tm_year)
     {
@@ -1951,7 +1951,7 @@ int32_t FtpServer::readChar()
       {
         cmdLine[ iCL ] = 0;
         command[ 0 ] = 0;
-        parameter = NULL;
+        parameter = nullptr;
         // empty line?
         if( iCL == 0 )
           rc = 0;
@@ -1960,7 +1960,7 @@ int32_t FtpServer::readChar()
           rc = iCL;
           // search for space between command and parameter
           parameter = strchr( cmdLine, ' ' );
-          if( parameter != NULL )
+          if( parameter != nullptr )
           {
             if( parameter - cmdLine > 4 )
               rc = -2; // Syntax error
@@ -1994,7 +1994,7 @@ int32_t FtpServer::readChar()
 
 bool FtpServer::haveParameter()
 {
-  if( parameter != NULL && strlen( parameter ) > 0 )
+  if( parameter != nullptr && strlen( parameter ) > 0 )
     return true;
   client.println(F("501 No file name" ));
   return false;  
@@ -2085,7 +2085,7 @@ int utf8_strlen(const String& str)
 
 bool FtpServer::makePath( char * fullName, char * param )
 {
-  if( param == NULL )
+  if( param == nullptr )
     param = parameter;
     
   // Root or empty?
@@ -2110,7 +2110,7 @@ bool FtpServer::makePath( char * fullName, char * param )
 
     // Trova l'ultima slash per individuare il livello superiore
     char *lastSlash = strrchr( workingDir, '/' );
-    if (lastSlash != NULL)
+    if (lastSlash != nullptr)
     {
       // Se l'unica slash � quella iniziale, siamo alla root
       if (lastSlash == workingDir)
