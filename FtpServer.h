@@ -486,11 +486,11 @@
 
 // Setup debug printing macros.
 #ifdef FTP_SERVER_DEBUG
-	#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-	#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+	#define DEBUG_PRINT(...) do { DEBUG_PRINTER.print(__VA_ARGS__); } while(false)
+	#define DEBUG_PRINTLN(...) do { DEBUG_PRINTER.println(__VA_ARGS__); } while(false)
 #else
-	#define DEBUG_PRINT(...) {}
-	#define DEBUG_PRINTLN(...) {}
+	#define DEBUG_PRINT(...) do {} while(false)
+	#define DEBUG_PRINTLN(...) do {} while(false)
 #endif
 
 #define FTP_CMD_PORT 21           // Command port on which server is listening
