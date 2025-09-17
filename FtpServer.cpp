@@ -1575,7 +1575,12 @@ bool FtpServer::doList()
 		String fn = fileDir.name();
 		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 
-		generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00", this->user);
+    #if STORAGE_TYPE == STORAGE_SD_MMC
+				time_t time = fileDir.getLastWrite();
+        generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), time, this->user);
+    #else
+        generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00", this->user);
+    #endif
 
 		nbMatch ++;
 		return true;
