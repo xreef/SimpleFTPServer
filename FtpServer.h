@@ -141,8 +141,8 @@
 		//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
 		#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
 		#define NET_CLASS WiFi
-//		#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//		#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//		#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+//		#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ETHERNET_GENERIC)
 
 		#include <Ethernet_Generic.h>
@@ -152,8 +152,8 @@
 		#define NET_CLASS Ethernet
 
 //		#if defined(ESP8266) || defined(ESP32)
-//			#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//			#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//			#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+//			#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 //		#else
 //			#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 //			#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
@@ -167,8 +167,8 @@
 		#define NET_CLASS Ethernet
 
 //		#if defined(ESP8266) || defined(ESP32)
-//			#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//			#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//			#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+//			#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 //		#else
 //			#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 //			#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
@@ -181,8 +181,8 @@
 	#define FTP_SERVER_NETWORK_SERVER_CLASS UIPServer
 	#define NET_CLASS Ethernet
 //	#if define(ESP8266) || define(ESP32)
-//		#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//		#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//		#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+//		#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 //	#else
 //		#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 //		#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
@@ -211,8 +211,8 @@
 	//#define FTP_CLIENT_NETWORK_SSL_CLASS WiFiClientSecure
 	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
 	#define NET_CLASS WiFi
-//	#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-//	#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+//	#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+//	#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32_ETH)
 
 	#include <ETH.h>
@@ -244,8 +244,8 @@
 #endif
 
 #if defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040)
-	#define CommandIs( a ) (command != NULL && ! strcmp_P( command, PSTR( a )))
-	#define ParameterIs( a ) ( parameter != NULL && ! strcmp_P( parameter, PSTR( a )))
+	#define CommandIs( a ) (command != nullptr && ! strcmp_P( command, PSTR( a )))
+	#define ParameterIs( a ) ( parameter != nullptr && ! strcmp_P( parameter, PSTR( a )))
 #else
 	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
@@ -486,11 +486,11 @@
 
 // Setup debug printing macros.
 #ifdef FTP_SERVER_DEBUG
-	#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-	#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+	#define DEBUG_PRINT(...) do { DEBUG_PRINTER.print(__VA_ARGS__); } while(false)
+	#define DEBUG_PRINTLN(...) do { DEBUG_PRINTER.println(__VA_ARGS__); } while(false)
 #else
-	#define DEBUG_PRINT(...) {}
-	#define DEBUG_PRINTLN(...) {}
+	#define DEBUG_PRINT(...) do {} while(false)
+	#define DEBUG_PRINTLN(...) do {} while(false)
 #endif
 
 #define FTP_CMD_PORT 21           // Command port on which server is listening
@@ -585,8 +585,8 @@ private:
   bool    doMlsd();
   void    closeTransfer();
   void    abortTransfer();
-  bool    makePath( char * fullName, char * param = NULL );
-  bool    makeExistsPath( char * path, char * param = NULL );
+  bool    makePath( char * fullName, char * param = nullptr );
+  bool    makeExistsPath( char * path, char * param = nullptr );
   bool    openDir( FTP_DIR * pdir );
   bool    isDir( char * path );
   uint8_t getDateTime( char * dt, uint16_t * pyear, uint8_t * pmonth, uint8_t * pday,
