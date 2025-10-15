@@ -12,6 +12,7 @@
  - Wio Terminal (SdFat 2, Seed SD, and native FAT)
 
 #### Changelog
+- 2025-10-13 Fix: updated SdFat2 initialization for Arduino Mega; integrated W5500 initialization (example Arduino_Mega_W5500_SdFat2)
 - 2025-02-11 2.1.11 Management of relative and absolute path in command prompt (./ ../ /)
 - 2025-01-28 2.1.11 Fix REST and add ALLO, and STAT commands
 - 2025-01-13 2.1.11 Add addictional LOG to prevent multiple user issues

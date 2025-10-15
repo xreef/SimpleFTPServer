@@ -18,7 +18,7 @@
 #define FTP_SERVER_CONFIG_H
 
 // Uncomment to enable printing out nice debug messages.
- #define FTP_SERVER_DEBUG
+// #define FTP_SERVER_DEBUG
 // #define FTP_ADDITIONAL_DEBUG
 
 // Define where debug output will be printed.
@@ -125,10 +125,28 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 
 // Size of file buffer for read/write
 // Transfer speed depends of this value
-// Best value depends on many factors: SD card, client side OS, ... 
+// Best value depends on many factors: SD card, client side OS, ...
 // But it can be reduced to 512 if memory usage is critical.
 #ifndef FTP_BUF_SIZE
-	#define FTP_BUF_SIZE 1024 //2048 //1024 // 512
+  // Set sensible defaults per piattaforma to maximize throughput without
+  // exhausting RAM. Users can still override these by defining FTP_BUF_SIZE
+  // before including this header.
+  #if defined(ESP32) || defined(ARDUINO_ARCH_ESP32)      // lots of RAM, faster I/O
+    #define FTP_BUF_SIZE 2048
+  #elif defined(ESP8266) || defined(ARDUINO_ARCH_ESP8266) // less RAM than ESP32
+    #define FTP_BUF_SIZE 1024
+  #elif defined(__AVR__)                                  // classic AVR (Uno, Nano)
+    #define FTP_BUF_SIZE 512
+  #elif defined(ARDUINO_ARCH_STM32) || defined(STM32F1)   // STM32 boards - moderate RAM
+    #define FTP_BUF_SIZE 1024
+  #elif defined(ARDUINO_ARCH_RP2040) || defined(PICO_RP2040) // Raspberry Pi Pico W
+    #define FTP_BUF_SIZE 2048
+  #elif defined(ARDUINO_ARCH_SAMD)                        // SAMD (MKR, Nano 33)
+    #define FTP_BUF_SIZE 1024
+  #else
+    // Generic default if architecture not detected
+    #define FTP_BUF_SIZE 1024
+  #endif
 #endif
 
 #endif // FTP_SERVER_CONFIG_H
