@@ -2437,47 +2437,56 @@ uint32_t FtpServer::fileSize( FTP_FILE & file ) {
 
 #if (STORAGE_TYPE == STORAGE_SEEED_SD)
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
-		DEBUG_PRINT(F("File to open ") );
-		DEBUG_PRINT( path );
-		DEBUG_PRINT(F(" readType ") );
-		DEBUG_PRINTLN(readTypeInt);
+    DEBUG_PRINT(F("File to open ") );
+    DEBUG_PRINT( path );
+    DEBUG_PRINT(F(" readType ") );
+    DEBUG_PRINTLN(readTypeInt);
 
-		if (readTypeInt == 0X01) {
-			readTypeInt = FILE_READ;
-		}else {
-			readTypeInt = FILE_WRITE;
-		}
-
-		file = STORAGE_MANAGER.open( path, readTypeInt );
-		if (!file) { // && readTypeInt[0]==FILE_READ) {
-			return false;
-		}else{
-			DEBUG_PRINTLN(F("TRUE"));
-
-			return true;
-		}
+    // Fix: mappatura esplicita delle modalità
+    // 0x01 = FTP_FILE_READ, 0x02 = FTP_FILE_WRITE, 0x03 = FTP_FILE_APPEND
+    uint8_t mode = 0;
+    if (readTypeInt == 0x01) {
+      mode = FILE_READ;
+    } else if (readTypeInt == 0x02) {
+      mode = FILE_WRITE; // overwrite, non append
+    } else if (readTypeInt == 0x03) {
+      mode = FILE_WRITE | O_APPEND; // append
+    } else {
+      mode = FILE_READ;
+    }
+    file = STORAGE_MANAGER.open( path, mode );
+    if (!file) {
+      return false;
+    } else {
+      DEBUG_PRINTLN(F("TRUE"));
+      return true;
+    }
 }
-#elif ((STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && defined(ESP8266))// FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_ESP8266_242)
+#elif ((STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC) && defined(ESP8266))
   bool FtpServer::openFile( char path[ FTP_CWD_SIZE ], int readTypeInt ){
-		DEBUG_PRINT(F("File to open ") );
-		DEBUG_PRINT( path );
-		DEBUG_PRINT(F(" readType ") );
-		DEBUG_PRINTLN(readTypeInt);
+    DEBUG_PRINT(F("File to open ") );
+    DEBUG_PRINT( path );
+    DEBUG_PRINT(F(" readType ") );
+    DEBUG_PRINTLN(readTypeInt);
 
-		if (readTypeInt == 0X01) {
-			readTypeInt = FILE_READ;
-		}else {
-			readTypeInt = FILE_WRITE;
-		}
-
-		file = STORAGE_MANAGER.open( path, readTypeInt );
-		if (!file) { // && readTypeInt[0]==FILE_READ) {
-			return false;
-		}else{
-			DEBUG_PRINTLN(F("TRUE"));
-
-			return true;
-		}
+    // Fix: mappatura esplicita delle modalità
+    uint8_t mode = 0;
+    if (readTypeInt == 0x01) {
+      mode = FILE_READ;
+    } else if (readTypeInt == 0x02) {
+      mode = FILE_WRITE;
+    } else if (readTypeInt == 0x03) {
+      mode = FILE_WRITE | O_APPEND;
+    } else {
+      mode = FILE_READ;
+    }
+    file = STORAGE_MANAGER.open( path, mode );
+    if (!file) {
+      return false;
+    } else {
+      DEBUG_PRINTLN(F("TRUE"));
+      return true;
+    }
 }
 #elif (STORAGE_TYPE == STORAGE_SPIFFS || STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_FFAT )
   bool FtpServer::openFile( const char * path, const char * readType ) {
