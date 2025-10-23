@@ -18,7 +18,7 @@
 	const char* password = "<YOUR-PASSWD>";
 #endif
 const char* ssid_AP = "ESP32";
-const char* password_AP = "aabbccdd77";
+const char* password_AP = "password";
 
 FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
 

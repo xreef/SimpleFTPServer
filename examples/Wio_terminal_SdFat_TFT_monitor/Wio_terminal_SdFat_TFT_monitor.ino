@@ -31,8 +31,8 @@ SdFs sd;
 
 FtpServer ftpSrv;
 
-const char *ssid = "reef-casa-sopra";
-const char *password = "aabbccdd77";
+const char *ssid = "<SSID>";
+const char *password = "<PASSWD>";
 
 #define MAIN_TOP 110
 
