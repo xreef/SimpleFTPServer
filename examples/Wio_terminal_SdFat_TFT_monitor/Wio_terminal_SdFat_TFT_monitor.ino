@@ -40,7 +40,7 @@ const char *password = "aabbccdd77";
 #define FREE_SPACE_PIE_Y MAIN_TOP+40
 #define FREE_SPACE_PIE_RADIUS 50
 
-void freeSpacePieData(unsigned int freeSpace, unsigned int totalSpace) {
+void freeSpacePieData(uint32_t freeSpace, uint32_t totalSpace) {
 	int pieFree = 360 - (freeSpace * 360 / totalSpace);
 
     fillSegment(FREE_SPACE_PIE_X, FREE_SPACE_PIE_Y, 0, pieFree, FREE_SPACE_PIE_RADIUS, TFT_RED);
@@ -53,8 +53,8 @@ void freeSpacePieData(unsigned int freeSpace, unsigned int totalSpace) {
     // Set the font colour to be white with a black background, set text size multiplier to 1
     tft.setTextColor(TFT_WHITE, TFT_BLACK);  tft.setTextSize(1);
     // We can now plot text on screen using the "print" class
-    Serial.print(freeSpace/1000);Serial.print("Mb/");Serial.print(String(totalSpace/1000));Serial.println("Mb");
-    tft.print(freeSpace/1000);tft.print("Mb/");tft.print(String(totalSpace/1000));tft.println("Mb");
+    Serial.print((unsigned long)(freeSpace/1000));Serial.print("Mb/");Serial.print(String(totalSpace/1000));Serial.println("Mb");
+    tft.print((unsigned long)(freeSpace/1000));tft.print("Mb/");tft.print(String(totalSpace/1000));tft.println("Mb");
 }
 
 void connectedDisconnected(bool connected) {
@@ -95,7 +95,7 @@ char* subString(const char *s, int index, int n){
 }
 
 
-void fileTransfer(FtpTransferOperation ftpOperation, const char* filename, unsigned int transferredSize) {
+void fileTransfer(FtpTransferOperation ftpOperation, const char* filename, uint32_t transferredSize) {
 	int yoffset = 2;
 
     tft.setCursor(20, MAIN_TOP+(FREE_SPACE_PIE_RADIUS*2)+yoffset, 2);
@@ -114,7 +114,7 @@ void fileTransfer(FtpTransferOperation ftpOperation, const char* filename, unsig
 	tft.setCursor(20+160, MAIN_TOP+(FREE_SPACE_PIE_RADIUS*2)+yoffset, 2);
 	tft.print(F("                         "));
 	tft.setCursor(20+160, MAIN_TOP+(FREE_SPACE_PIE_RADIUS*2)+yoffset, 2);
-	tft.print(transferredSize);tft.print("Kb");
+	tft.print((unsigned long)transferredSize);tft.print("Kb");
 
 	tft.setCursor(320-55, MAIN_TOP+(FREE_SPACE_PIE_RADIUS*2)+yoffset, 2);
 	switch (ftpOperation) {
@@ -190,7 +190,7 @@ void wifiStrenght (int8_t RSSI, bool connection = false) {
 	}
 }
 
-void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
+void _callback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace){
 	Serial.print(">>>>>>>>>>>>>>> _callback " );
 	Serial.print(ftpOperation);
 	/* FTP_CONNECT,
@@ -198,9 +198,9 @@ void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int t
 	 * FTP_FREE_SPACE_CHANGE
 	 */
 	Serial.print(" ");
-	Serial.print(freeSpace);
+	Serial.print((unsigned long)freeSpace);
 	Serial.print(" ");
-	Serial.println(totalSpace);
+	Serial.println((unsigned long)totalSpace);
 
 	// freeSpace : totalSpace = x : 360
 
@@ -209,7 +209,7 @@ void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int t
 	if (ftpOperation == FTP_CONNECT) connectedDisconnected(true);
 	if (ftpOperation == FTP_DISCONNECT) connectedDisconnected(false);
 };
-void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){
+void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize){
 	Serial.print(">>>>>>>>>>>>>>> _transferCallback " );
 	Serial.print(ftpOperation);
 	/* FTP_UPLOAD_START = 0,
@@ -229,7 +229,7 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsi
 	Serial.print(" ");
 	Serial.print(name);
 	Serial.print(" ");
-	Serial.println(transferredSize);
+	Serial.println((unsigned long)transferredSize);
 
 	(ftpOperation==FTP_UPLOAD || ftpOperation==FTP_DOWNLOAD)?transfer(true, ftpOperation==FTP_UPLOAD):transfer(false, false);
 

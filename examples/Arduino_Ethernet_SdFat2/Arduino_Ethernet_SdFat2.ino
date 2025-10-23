@@ -54,6 +54,29 @@ IPAddress serverIp( 0, 0, 0, 0 );
 
 ArduinoOutStream cout( Serial );
 
+// Callback called on connect/disconnect and when free space changes
+void _callback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace) {
+  // Log basic info to serial
+  cout << F("[FTP callback] op=") << (int)ftpOperation
+       << F(" free=") << (unsigned long)freeSpace
+       << F(" total=") << (unsigned long)totalSpace << endl;
+
+  // ftpOperation values include:
+  // FTP_CONNECT, FTP_DISCONNECT, FTP_FREE_SPACE_CHANGE
+  // Add custom handling here if needed (e.g., LED, status output)
+}
+
+// Callback called during file transfers
+void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize) {
+  cout << F("[FTP transfer] op=") << (int)ftpOperation
+       << F(" name=") << name
+       << F(" size=") << (unsigned long)transferredSize << endl;
+
+  // ftpOperation values include:
+  // FTP_UPLOAD_START, FTP_UPLOAD, FTP_DOWNLOAD_START, FTP_DOWNLOAD,
+  // FTP_TRANSFER_STOP, FTP_TRANSFER_ERROR
+  // Add custom handling here if needed (e.g., progress indicator)
+}
 
 void setup()
 {
@@ -110,6 +133,10 @@ void setup()
   cout << F("IP address of server: ")
        << int( serverIp[0]) << "." << int( serverIp[1]) << "."
        << int( serverIp[2]) << "." << int( serverIp[3]) << endl;
+
+  // Register callbacks so user code receives FTP events and transfer notifications
+  ftpSrv.setCallback(_callback);
+  ftpSrv.setTransferCallback(_transferCallback);
 
   // Initialize the FTP server
   ftpSrv.begin("user","password");

@@ -18,7 +18,7 @@
 #define FTP_SERVER_CONFIG_H
 
 // Uncomment to enable printing out nice debug messages.
-// #define FTP_SERVER_DEBUG
+#define FTP_SERVER_DEBUG
 // #define FTP_ADDITIONAL_DEBUG
 
 // Define where debug output will be printed.
@@ -84,7 +84,7 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 // Standard AVR Arduino configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
 	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO 	NETWORK_W5100
-	#define DEFAULT_STORAGE_TYPE_ARDUINO 				STORAGE_SD
+	#define DEFAULT_STORAGE_TYPE_ARDUINO 				STORAGE_SDFAT2
 #endif
 // STM32 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_STM32
@@ -122,6 +122,10 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 	#define FTP_AUTH_TIME_OUT 10
 #endif
 
+// Uncomment to enable dynamic transfer buffer
+#if defined(ESP32) || defined(ESP8266)
+	#define DYNAMIC_TRANSFER_BUFFER
+#endif
 
 // Size of file buffer for read/write
 // Transfer speed depends of this value

@@ -28,7 +28,7 @@ const char* password = "<YOUR_PASSWD>";
 
 FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
 
-void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
+void _callback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace){
   switch (ftpOperation) {
     case FTP_CONNECT:
       Serial.println(F("FTP: Connected!"));
@@ -38,15 +38,15 @@ void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int t
       break;
     case FTP_FREE_SPACE_CHANGE:
     	Serial.print(F("FTP: Free space change, free "));
-    	Serial.print(freeSpace);
+    	Serial.print((unsigned long)freeSpace);
     	Serial.print(F(" of "));
-    	Serial.println(totalSpace);
+    	Serial.println((unsigned long)totalSpace);
       break;
     default:
       break;
   }
 };
-void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){
+void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize){
   switch (ftpOperation) {
     case FTP_UPLOAD_START:
       Serial.println(F("FTP: Upload start!"));
@@ -55,7 +55,7 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsi
       Serial.print(F("FTP: Upload of file "));
       Serial.print(name);
       Serial.print(F(" "));
-      Serial.print(transferredSize);
+      Serial.print((unsigned long)transferredSize);
       Serial.println(F("bytes"));
       break;
     case FTP_TRANSFER_STOP:

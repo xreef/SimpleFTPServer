@@ -48,7 +48,7 @@ FtpServer ftpServer;
 bool sdCardMounted = false;
 
 // Forward declaration
-void ftpCallback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace);
+void ftpCallback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace);
 
 void setup() {
   Serial.begin(115200);
@@ -89,7 +89,7 @@ void loop() {
 }
 
 // Callback function called on FTP events
-void ftpCallback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) {
+void ftpCallback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace) {
   switch (ftpOperation) {
     case FTP_CONNECT:
       Serial.println("\n>>> FTP Client connected!");
@@ -159,11 +159,10 @@ void ftpCallback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int
     case FTP_FREE_SPACE_CHANGE:
       Serial.println(">>> Storage space changed");
       Serial.print(">>> Free space: ");
-      Serial.print(freeSpace);
+      Serial.print((unsigned long)freeSpace);
       Serial.print(" kB / Total: ");
-      Serial.print(totalSpace);
+      Serial.print((unsigned long)totalSpace);
       Serial.println(" kB");
       break;
   }
 }
-
