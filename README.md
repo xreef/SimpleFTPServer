@@ -148,7 +148,7 @@ See `FtpServerKey.h` for config defines and defaults. Key settings:
 See the `examples/` folder for ready-to-use sketches for many platforms (ESP32, ESP8266, RP2040, STM32, Wio Terminal, Arduino). Adapt SSID, credentials and SD pins as needed.
 
 ## 📝 Changelog
-- 2025-10-13 2.2.0 Fix: 
+- 2025-10-13 3.0.0 Fix: 
   - updated SdFat2 initialization for Arduino Mega; integrated W5500 initialization (example Arduino_Mega_W5500_SdFat2)
   - Fix READ WRITE APPEND problem
   - update README
