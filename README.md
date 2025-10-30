@@ -151,10 +151,11 @@ See the `examples/` folder for ready-to-use sketches for many platforms (ESP32, 
 - 2025-10-13 3.0.0 Fix: 
   - updated SdFat2 initialization for Arduino Mega; integrated W5500 initialization (example Arduino_Mega_W5500_SdFat2)
   - Fix READ WRITE APPEND problem
-  - update README
   - Fix ram usage
-  - Set correct buffer size
+  - Set correct buffer size (Dynamic and Static)
   - Add FTP callbacks for connection events and file transfers; update data types for free space and transferred size
+  - Improve file-open handling (ensure reads start at file beginning), increase passive data connection wait time, add robust FFat dir create/remove (fallback to /ffat and POSIX), add configurable minimum free-space check before uploads
+  - Refactor FTP callback functions to use uint32_t for space parameters, improve serial output, and register callbacks for FTP events
 - 2025-02-11 2.1.11 Management of relative and absolute path in command prompt (./ ../ /)
 - 2025-01-28 2.1.11 Fix REST and add ALLO, and STAT commands
 - 2025-01-13 2.1.11 Add addictional LOG to prevent multiple user issues
