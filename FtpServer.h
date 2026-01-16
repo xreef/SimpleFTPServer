@@ -610,7 +610,11 @@ private:
 	  String filename = String(f_name);
 	    return filename;
 	#elif STORAGE_TYPE == STORAGE_FATFS
-	  return String(file->fileName());
+  		return String(file->fileName());
+	#elif STORAGE_TYPE == STORAGE_SPIFM
+	  char f_name[100];
+	  file->getName(f_name, sizeof(f_name));
+  		return String(f_name);
 	#else
 	  return String(file->name());
 	#endif

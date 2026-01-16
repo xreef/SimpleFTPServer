@@ -16,6 +16,6 @@
 	},
 	"url": "https://www.mischianti.org",
 	"frameworks": "Arduino",
-    "version": "",
+    "version": "3.0.2",
 	"platforms": "*"
 }
