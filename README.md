@@ -1,4 +1,4 @@
-# SimpleFTPServer Library
+# SimpleFTPServer Library 3.0.2
 
 ![SimpleFTPServer Logo](resources/SimpleFTPServerLogo.png)
 
