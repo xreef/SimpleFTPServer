@@ -861,6 +861,26 @@ bool FtpServer::processCommand()
   {
 	DEBUG_PRINTLN(F("List of file!!"));
 
+    // LIST/NLST (RFC 959) and MLSD (RFC 3659 sect. 7.2) accept an optional pathname
+    // argument. openDir() always lists cwdName, so when a directory argument is supplied
+    // resolve it and point cwdName at it just for the openDir() call, then restore. This
+    // lets clients that list a folder without a preceding CWD (e.g. "MLSD /sub") work
+    // instead of silently re-listing the current directory. Tokens that look like option
+    // flags ("LIST -al") and arguments that don't resolve to a directory are ignored, so
+    // behaviour falls back to listing cwdName as before.
+    char savedCwd[ FTP_CWD_SIZE ];
+    bool cwdSwapped = false;
+    if( haveParameter() && parameter[ 0 ] != '-' )
+    {
+      char path[ FTP_CWD_SIZE ]{ 0 };
+      if( makePath( path ) && exists( path ) && isDir( path ))
+      {
+        strcpy( savedCwd, cwdName );
+        strcpy( cwdName, path );
+        cwdSwapped = true;
+      }
+    }
+
     if( dataConnect()){
       if( openDir( & dir ))
       {
@@ -879,6 +899,9 @@ bool FtpServer::processCommand()
     	  data.stop();
       }
     }
+
+    if( cwdSwapped )
+      strcpy( cwdName, savedCwd );
   }
   //
   //  MLST - Listing for Machine Processing (see RFC 3659)
