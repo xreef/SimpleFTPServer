@@ -50,6 +50,7 @@
 #include <FtpServer.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Implementations for 8.3 helpers (only for SD on AVR)
 #if (STORAGE_TYPE == STORAGE_SD)
@@ -289,7 +290,9 @@ void FtpServer::begin( const char * _welcomeMessage ) {
 void FtpServer::end()
 {
     if(client.connected()) {
-        disconnectClient();
+        disconnectClient();                      // -> abortTransfer -> finishCustom if a custom transfer is live
+    } else if (transferStage == FTP_Custom) {    // no client to disconnect, but a custom transfer is still
+        finishCustom( CustomTransfer::TR_ABORTED ); // in flight: free it so onEnd runs on this server-side stop too
     }
 
 #if FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32 // && !defined(ARDUINO_ARCH_RP2040)
@@ -441,7 +444,11 @@ uint8_t FtpServer::handleFTP() {
 		} else if (transferStage == FTP_Mlsd)  // MLSD listing
 				{
 			if (!doMlsd()) {
-
+				transferStage = FTP_Close;
+			}
+		} else if (transferStage == FTP_Custom) // caller-driven cooperative transfer
+				{
+			if (!doCustom()) {
 				transferStage = FTP_Close;
 			}
 		}
@@ -523,6 +530,91 @@ void FtpServer::disconnectClient()
   }
 }
 
+// --- FtpResponse: the narrow capability facade handed to a command hook (see FtpServer.h).
+// Each method acts on the owning server's internals via friendship. ---
+void FtpResponse::reply( const char * line )
+{
+  server_.client.println( line );
+  server_._replied = true;                 // marks the command handled (built-in skipped)
+}
+
+void FtpResponse::rewriteCommand( const char * cmd, const char * param )
+{
+  strncpy( server_.command, cmd, sizeof( server_.command ) - 1 );
+  server_.command[ sizeof( server_.command ) - 1 ] = '\0';
+  size_t n = param ? strnlen( param, sizeof( server_.cmdLine ) - 1 ) : 0;
+  memmove( server_.cmdLine, param ? param : "", n );   // memmove: param may point into cmdLine
+  server_.cmdLine[ n ] = '\0';
+  server_.parameter = server_.cmdLine;
+}
+
+bool FtpResponse::isAuthenticated() const
+{
+  return server_.cmdStage == FTP_Cmd;
+}
+
+void FtpResponse::setAuthenticated( bool authenticated )
+{
+  server_.cmdStage = authenticated ? FTP_Cmd : FTP_User;
+}
+
+bool FtpResponse::beginCustomTransfer( const CustomTransfer * xfer, void * ctx )
+{
+  if( ! server_.dataConnect( true ) )     // open data connection + send "150"; false on failure
+    return false;
+  server_._xfer = xfer;
+  server_._customCtx = ctx;
+  server_.transferStage = FTP_Custom;
+  server_.bytesTransfered = 0;              // progress accumulator, same one the built-in uses
+  if( server_._transferCallback )           // mirror RETR: announce the transfer start (size unknown → 0)
+    server_._transferCallback( FTP_DOWNLOAD_START, xfer->name, 0 );
+  // Mark THIS command handled. _replied is per-command (reset before each hook call), so a
+  // later command (e.g. ABOR) arriving while the transfer is still running is NOT swallowed —
+  // it falls through to its built-in. Keying off transferStage instead would block every
+  // command for the whole transfer.
+  server_._replied = true;
+  return true;
+}
+
+// Push one chunk of the active custom transfer; false ends it (finishCustom already ran).
+bool FtpServer::doCustom()
+{
+  int r = _xfer->sendChunk( _customCtx, data );
+  if( r > 0 )                             // bytes written this tick — report progress, continue
+  {
+    bytesTransfered += r;
+    if( FtpServer::_transferCallback )
+      FtpServer::_transferCallback( FTP_DOWNLOAD, _xfer->name, bytesTransfered );
+    return true;
+  }
+  if( r == 0 )                            // yielded (nothing to send this tick); no progress
+    return true;
+  finishCustom( r == -1 ? CustomTransfer::TR_DONE : CustomTransfer::TR_ABORTED );
+  return false;
+}
+
+// End a custom transfer exactly once: onEnd() (caller cleanup + optional custom final line),
+// then the final response (custom or default), close the data connection, clear state.
+void FtpServer::finishCustom( CustomTransfer::TransferResult result )
+{
+  const char * line = ( _xfer && _xfer->onEnd ) ? _xfer->onEnd( _customCtx, result ) : nullptr;
+
+#if defined(ESP8266) || defined(ESP32)
+  data.flush();
+  delay( 20 );                            // grace period to let TCP finish sending
+#endif
+  data.stop();
+
+  client.println( line && *line ? line
+                                : ( result == CustomTransfer::TR_DONE ? "226 Transfer complete" : "426 Transfer aborted" ) );
+  if( FtpServer::_transferCallback )       // mirror RETR: report the terminal outcome + total bytes
+    FtpServer::_transferCallback( result == CustomTransfer::TR_DONE ? FTP_TRANSFER_STOP : FTP_TRANSFER_ERROR,
+                                  _xfer ? _xfer->name : nullptr, bytesTransfered );
+  _xfer = nullptr;
+  _customCtx = nullptr;
+  transferStage = FTP_Close;
+}
+
 bool FtpServer::processCommand()
 {
   ///////////////////////////////////////
@@ -534,6 +626,22 @@ bool FtpServer::processCommand()
   // RoSchmi added the next two lines
   DEBUG_PRINT(F("Command is: "));
   DEBUG_PRINTLN(command);
+
+  // Command hook: runs before the built-in dispatch. reply() marks the command as handled (the
+  // built-in is skipped); rewriteCommand() changes which command runs; doing nothing lets the
+  // original run.
+  _replied = false;
+  if( _commandHandler )
+  {
+    FtpResponse res( *this );
+    _commandHandler( res, command, parameter );
+  }
+
+  if( _replied )
+  {
+    // _commandHandler processed this command 
+    return true;
+  }
 
   //
   //  USER - User Identity 
@@ -2186,7 +2294,11 @@ void FtpServer::closeTransfer()
 
 void FtpServer::abortTransfer(const __FlashStringHelper* reply)
 {
-  if( transferStage != FTP_Close )
+  if( transferStage == FTP_Custom )        // caller-driven transfer: finishCustom owns onEnd + response
+  {
+    finishCustom( CustomTransfer::TR_ABORTED );
+  }
+  else if( transferStage != FTP_Close )
   {
 	  // A listing has no file and no byte count of its own: reporting one would hand the
 	  // application the name and total of whatever transfer ran before it.

@@ -528,7 +528,8 @@ enum ftpTransfer { FTP_Close = 0, // In this stage, close data channel
                    FTP_Store,     //  store file
                    FTP_List,      //  list of files
                    FTP_Nlst,      //  list of name of files
-                   FTP_Mlsd };    //  listing for machine processing
+                   FTP_Mlsd,      //  listing for machine processing
+                   FTP_Custom };  //  caller-driven cooperative transfer (beginCustomTransfer)
 
 enum ftpDataConn { FTP_NoConn = 0,// No data connection
                    FTP_Pasive,    // Passive type
@@ -557,6 +558,76 @@ enum FtpTransferOperation {
 	  FTP_UPLOAD_ERROR = 5
 };
 
+class FtpServer;
+
+// A caller-driven data transfer, streamed cooperatively — one chunk per handleFTP() call — so
+// the control channel stays responsive and nothing blocks. Use it for outputs with no standard
+// FTP equivalent (a multi-file bundle, on-the-fly compression), started from a command hook via
+// FtpResponse::beginCustomTransfer().
+struct CustomTransfer
+{
+  enum TransferResult {
+  	TR_DONE,      // transfer completed successfully
+	TR_ABORTED,   // client aborted, connection lost, or a chunk reported an error
+  };
+
+  // Label reported to setTransferCallback on start/progress/end — a custom transfer has no
+  // `file`, so it supplies its own name (e.g. the download filename). May be nullptr.
+  const char * name;
+
+  // Produce and send the next chunk into `data`, cooperatively (must NOT block). Return:
+  //   >0  bytes written this tick — reported as progress; transfer continues
+  //    0  wrote nothing, not done — yield (e.g. socket full); retried next tick, no progress
+  //   -1  done                    — TR_DONE
+  //  <-1  error                   — TR_ABORTED
+  // The byte count drives the same progress callback the built-in RETR fires, so client
+  // progress and a host stall-watchdog keyed on setTransferCallback both work unchanged.
+  int (*sendChunk)( void * ctx, Client & data );
+
+  // Finalize — called EXACTLY once for every outcome (done, aborted, connection lost), so it
+  // owns cleanup (close files, free buffers). Return a custom final response line, or
+  // nullptr/"" for the library default (226 on success, 426 otherwise). The returned pointer
+  // must outlive the call (a literal, static, or a buffer owned by ctx).
+  const char * (*onEnd)( void * ctx, TransferResult result );
+};
+
+// How a command hook reacts to the current command (Express-`res` style). A deliberately
+// narrow handle: it exposes only the operations below, so a hook cannot begin()/end()/
+// handleFTP() or rebind itself. FtpServer builds one and passes it to the hook; the methods
+// act on the server's internals through friendship.
+class FtpResponse
+{
+public:
+  // Send one FTP response line (e.g. "550 Read-only.") terminated by CRLF. Sending a reply
+  // from a command hook marks the command handled, so the built-in handler is skipped.
+  void reply( const char * line );
+
+  // Replace the command currently being processed; the library then dispatches the rewrite
+  // instead of the original (e.g., map "XLATEST" to "RETR <file>" and reuse the built-in
+  // download). Copies are bound to the internal buffers, so cmd/param of any length are
+  // safe. Note: the rewrite is NOT re-filtered by the hook — apply your policy to the target
+  // verb, not just the incoming one.
+  void rewriteCommand( const char * cmd, const char * param );
+
+  // Whether the client has completed USER/PASS login.
+  bool isAuthenticated() const;
+
+  // Force the login state, so a hook can implement its own authentication (a token, an IP
+  // allow-list, an extra factor) and have the rest of the session honor it.
+  void setAuthenticated( bool authenticated );
+
+  // Start a caller-driven data transfer from within a command hook: opens the data connection
+  // (sends "150"), then drives xfer->sendChunk once per handleFTP() call until it finishes and
+  // calls xfer->onEnd on any termination. `ctx` is passed to both callbacks. Returns false if
+  // the data connection could not be opened. Marks the command as handled.
+  bool beginCustomTransfer( const CustomTransfer * xfer, void * ctx );
+
+private:
+  explicit FtpResponse( FtpServer & server ) : server_( server ) {}
+  FtpServer & server_;
+  friend class FtpServer;
+};
+
 class FtpServer
 {
 public:
@@ -581,10 +652,28 @@ public:
 		_transferCallback = _transferCallbackParam;
 	}
 
+	// Install a hook invoked for every command BEFORE the built-in dispatch. The hook is
+	// void; its intent is inferred from what it does with the FtpResponse: reply() takes the
+	// command over (the built-in is skipped), rewriteCommand() changes which command runs,
+	// and doing nothing lets the original run. The single extension point for rejecting,
+	// rewriting, implementing, or authorizing commands.
+	void setCommandHandler(void (*_commandHandlerParam)(FtpResponse& res, const char* command, const char* parameter) )
+	{
+		_commandHandler = _commandHandlerParam;
+	}
+
 private:
   // Use 32-bit sizes for callbacks to avoid truncation on platforms where "unsigned int" is 16-bit (AVR)
   void (*_callback)(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace){};
   void (*_transferCallback)(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize){};
+  void (*_commandHandler)(FtpResponse& res, const char* command, const char* parameter){};
+  bool _replied = false;   // set by FtpResponse::reply() during a hook call; drives handled-vs-pass
+  friend class FtpResponse;
+
+  const CustomTransfer * _xfer = nullptr;   // active caller-driven transfer (FTP_Custom), or null
+  void *                 _customCtx = nullptr;
+  bool doCustom();                          // push one chunk; false when the transfer ends
+  void finishCustom( CustomTransfer::TransferResult result ); // onEnd + final response + close, exactly once
 
   void    iniVariables();
   void    clientConnected();
