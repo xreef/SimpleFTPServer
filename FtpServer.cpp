@@ -444,10 +444,23 @@ uint8_t FtpServer::handleFTP() {
 
 				transferStage = FTP_Close;
 			}
-		} else if (cmdStage > FTP_Client
+		}
+
+		// Out of the chain above, whose tail this was: a running transfer always took its own
+		// branch, so the deadline was never reached — and doRetrieve() now waits a stalled peer
+		// out instead of aborting, leaving nothing else to end it. RETR refreshes this deadline
+		// as it sends; the other types never do, so bounding them would kill them mid-progress.
+		const bool in_retrieve = (transferStage == FTP_Retrieve);
+		if (cmdStage > FTP_Client && (transferStage == FTP_Close || in_retrieve)
 				&& !((int32_t) (millisEndConnection - millis()) > 0)) {
-			DEBUG_PRINTLN(F("530 Timeout"));
-			client.println(F("530 Timeout"));
+			DEBUG_PRINTLN(F("Timeout"));
+			if (in_retrieve) {
+				// NOT closeTransfer(): that answers 226. abortTransfer() replies 426 and fires
+				// FTP_TRANSFER_ERROR, which releases what the app took.
+				abortTransfer();
+			} else {
+				client.println(F("530 Timeout"));
+			}
 			millisDelay = millis() + 200;       // delay of 200 ms
 			cmdStage = FTP_Stop;
 		}
@@ -1530,14 +1543,8 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINT(F("WRITTEN --> "));
     DEBUG_PRINTLN(written);
 
-    if (written <= 0) {
-      DEBUG_PRINTLN(F("ERROR: data.write returned <= 0"));
-      abortTransfer();
-      return false;
-    }
-
     // If partial write, try to send the remainder (best-effort)
-    if (written < nb) {
+    if (written > 0 && written < nb) {
       int16_t remaining = nb - written;
       DEBUG_PRINT(F("Partial write, attempting remainder -> "));
       DEBUG_PRINTLN(remaining);
@@ -1581,7 +1588,14 @@ bool FtpServer::doRetrieve()
 
     bytesTransfered += written;
 
-	  if (FtpServer::_transferCallback) {
+    // Progress pushes the idle deadline out; a round that sent nothing deliberately does not —
+    // a zero write is often a transient shut window, and that deadline ends a peer really gone.
+    if (written > 0) {
+      millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
+    }
+
+	  // Invoke callback on real progress: a stalled round must not look like a moving one to a watching app.
+	  if (written > 0 && FtpServer::_transferCallback) {
 		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file).c_str(), bytesTransfered);
 	  }
 
