@@ -586,7 +586,10 @@ private:
   bool    doList();
   bool    doMlsd();
   void    closeTransfer();
-  void    abortTransfer();
+  // Ends a transfer as FAILED: closes the file and the directory, replies exactly once —
+  // `reply` replaces the default "426 Transfer aborted" — and fires FTP_TRANSFER_ERROR for the
+  // stages that carry a file, so a listing that loses its data connection reports no transfer.
+  void    abortTransfer(const __FlashStringHelper* reply = nullptr);
   bool    makePath( char * fullName, char * param = nullptr );
   bool    makeExistsPath( char * path, char * param = nullptr );
   bool    openDir( FTP_DIR * pdir );

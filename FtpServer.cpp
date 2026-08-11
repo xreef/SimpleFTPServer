@@ -1393,9 +1393,7 @@ bool FtpServer::dataConnected()
 {
   if( data.connected())
     return true;
-  data.stop();
-  client.println(F("426 Data connection closed. Transfer aborted") );
-  transferStage = FTP_Close;
+  abortTransfer(F("426 Data connection closed. Transfer aborted"));
   return false;
 }
  
@@ -1496,8 +1494,8 @@ bool FtpServer::doRetrieve()
   // Handle resume if REST was used
   if (restartPos > 0) {
       if (!file.seek(restartPos)) {
-          client.println(F("450 Cannot seek to restart position."));
-          closeTransfer();
+          DEBUG_PRINTLN(F("ERROR: cannot seek to restart position"));
+          abortTransfer(F("450 Cannot seek to restart position."));
           return false;
       }
       bytesTransfered = restartPos; // Adjust the transferred bytes
@@ -1534,7 +1532,7 @@ bool FtpServer::doRetrieve()
 
     if (written <= 0) {
       DEBUG_PRINTLN(F("ERROR: data.write returned <= 0"));
-      closeTransfer();
+      abortTransfer();
       return false;
     }
 
@@ -1548,6 +1546,14 @@ bool FtpServer::doRetrieve()
       DEBUG_PRINT(F("MORE WRITTEN -> "));
       DEBUG_PRINTLN(more);
       if (more > 0) written += more;
+    }
+
+    // file.read() advanced the cursor by the full nb, so whatever went unsent must be re-read
+    // next round — otherwise those bytes vanish from the middle of the stream, silently.
+    if (written < nb && !file.seek(bytesTransfered + written)) {
+      DEBUG_PRINTLN(F("ERROR: cannot rewind after a short write"));
+      abortTransfer();   // the unsent bytes are unrecoverable — this is not a completed transfer
+      return false;
     }
 
     // Try to flush the socket where available (ESP-specific)
@@ -1566,9 +1572,10 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINT(F("DATA CONNECTED AFTER WRITE -> "));
     DEBUG_PRINTLN(data.connected() ? 1 : 0);
 
+    // Reachable only with bytes still to send, so the peer left mid-file: the transfer failed.
     if (!data.connected()) {
       DEBUG_PRINTLN(F("Data socket closed by peer after write"));
-      closeTransfer();
+      abortTransfer();
       return false;
     }
 
@@ -1607,8 +1614,9 @@ bool FtpServer::doStore()
         DEBUG_PRINT(F("No data received after "));
         DEBUG_PRINT(waited);
         DEBUG_PRINTLN(F(" ms"));
-        // Decide to close transfer to avoid infinite loop and client timeout
-        closeTransfer();
+        // A peer that finished a STOR closes the data connection; one still connected and
+        // silent has stalled, so answering 226 would call an unfinished upload complete.
+        abortTransfer();
         return false;
       }
       // else continue and read available data below
@@ -1662,9 +1670,8 @@ bool FtpServer::doStore()
   if( nb < 0 || rc == nb  ) {
     return true;
   }
-  client.println(F("552 Probably insufficient storage space") );
-  file.close();
-  data.stop();
+
+  abortTransfer(F("552 Probably insufficient storage space"));
   return false;
 }
 
@@ -2195,15 +2202,15 @@ void FtpServer::closeTransfer()
 
   data.stop();
 
+  // Fires on every completed transfer, including an empty or sub-millisecond one.
+  if (FtpServer::_transferCallback) {
+	  FtpServer::_transferCallback(FTP_TRANSFER_STOP, getFileName(&file).c_str(), bytesTransfered);
+  }
+
   if( deltaT > 0 && bytesTransfered > 0 )
   {
 	  DEBUG_PRINT( F(" Transfer completed in ") ); DEBUG_PRINT( deltaT ); DEBUG_PRINTLN( F(" ms, ") );
 	  DEBUG_PRINT( bytesTransfered / deltaT ); DEBUG_PRINTLN( F(" kbytes/s") );
-
-	  if (FtpServer::_transferCallback) {
-		  FtpServer::_transferCallback(FTP_TRANSFER_STOP, getFileName(&file).c_str(), bytesTransfered);
-	  }
-
 
     client.println(F("226-File successfully transferred") );
     client.print( F("226 ") ); client.print( deltaT ); client.print( F(" ms, ") );
@@ -2213,11 +2220,14 @@ void FtpServer::closeTransfer()
     client.println(F("226 File successfully transferred") );
 }
 
-void FtpServer::abortTransfer()
+void FtpServer::abortTransfer(const __FlashStringHelper* reply)
 {
   if( transferStage != FTP_Close )
   {
-	  if (FtpServer::_transferCallback) {
+	  // A listing has no file and no byte count of its own: reporting one would hand the
+	  // application the name and total of whatever transfer ran before it.
+	  const bool sending_file = ( transferStage == FTP_Retrieve || transferStage == FTP_Store );
+	  if (sending_file && FtpServer::_transferCallback) {
 		  FtpServer::_transferCallback(FTP_TRANSFER_ERROR, getFileName(&file).c_str(), bytesTransfered);
 	  }
 
@@ -2225,7 +2235,7 @@ void FtpServer::abortTransfer()
 #if STORAGE_TYPE != STORAGE_SPIFFS && STORAGE_TYPE != STORAGE_LITTLEFS && STORAGE_TYPE != STORAGE_SEEED_SD
     dir.close();
 #endif
-    client.println(F("426 Transfer aborted") );
+    client.println( reply ? reply : F("426 Transfer aborted") );
     DEBUG_PRINTLN( F(" Transfer aborted!") );
 
     transferStage = FTP_Close;
