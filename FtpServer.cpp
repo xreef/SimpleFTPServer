@@ -880,6 +880,10 @@ bool FtpServer::processCommand()
     	DEBUG_PRINTLN(F("Dir opened!!"));
 
         nbMatch = 0;
+        // Reset here rather than where a listing ends: a client that drops the data
+        // connection mid-entry ends one through neither closeTransfer() nor abortTransfer(),
+        // and the entry left pending would open the next listing.
+        listLineLen = listLineSent = 0;
         if( CommandIs( "LIST" ))
           transferStage = FTP_List;
         else if( CommandIs( "NLST" ))
@@ -1536,7 +1540,7 @@ bool FtpServer::doRetrieve()
   {
     // write() may not send everything in one call on some clients; capture return
     int32_t written = 0;
-    written = data.write( buf, nb );
+    written = writeData( (const uint8_t*) buf, nb );
 
     DEBUG_PRINT(F("NB --> "));
     DEBUG_PRINTLN(nb);
@@ -1549,7 +1553,7 @@ bool FtpServer::doRetrieve()
       DEBUG_PRINT(F("Partial write, attempting remainder -> "));
       DEBUG_PRINTLN(remaining);
       const uint8_t* p = (const uint8_t*)buf + written;
-      int32_t more = data.write(p, remaining);
+      int32_t more = writeData(p, remaining);
       DEBUG_PRINT(F("MORE WRITTEN -> "));
       DEBUG_PRINTLN(more);
       if (more > 0) written += more;
@@ -1587,12 +1591,6 @@ bool FtpServer::doRetrieve()
     }
 
     bytesTransfered += written;
-
-    // Progress pushes the idle deadline out; a round that sent nothing deliberately does not —
-    // a zero write is often a transient shut window, and that deadline ends a peer really gone.
-    if (written > 0) {
-      millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
-    }
 
 	  // Invoke callback on real progress: a stalled round must not look like a moving one to a watching app.
 	  if (written > 0 && FtpServer::_transferCallback) {
@@ -1689,59 +1687,17 @@ bool FtpServer::doStore()
   return false;
 }
 
-void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const char* fn, long fz, const char* time, const char* user, bool writeFilename = true) {
-	if( isDirectory ) {
-		//			  data->print( F("+/,\t") );
-		//			  DEBUG_PRINT(F("+/,\t"));
-
-		data->print( F("drwxrwsr-x\t2\t"));
-		data->print( user );
-		data->print( F("\t") );
-		data->print( long( 4096 ) );
-		data->print( F("\t") );
-
-		DEBUG_PRINT( F("drwxrwsr-x\t2\t") );
-		DEBUG_PRINT( user );
-		DEBUG_PRINT( F("\t") );
-
-		DEBUG_PRINT( long( 4096 ) );
-		DEBUG_PRINT( F("\t") );
-
-		data->print(time);
-		DEBUG_PRINT(time);
-
-		data->print( F("\t") );
-		if (writeFilename) data->println( fn );
-
-		DEBUG_PRINT( F("\t") );
-		if (writeFilename) DEBUG_PRINTLN( fn );
-
-	} else {
-//			data.print( F("+r,s") );
-//			DEBUG_PRINT(F("+r,s"));
-
-		data->print( F("-rw-rw-r--\t1\t") );
-		data->print( user );
-		data->print( F("\t") );
-		data->print( fz );
-		data->print( F("\t") );
-
-		DEBUG_PRINT( F("-rw-rw-r--\t1\t") );
-		DEBUG_PRINT( user );
-		DEBUG_PRINT( F("\t") );
-		DEBUG_PRINT( fz );
-		DEBUG_PRINT( F("\t") );
-
-		data->print(time);
-		DEBUG_PRINT(time);
-
-		data->print( F("\t") );
-		if (writeFilename) data->println( fn );
-
-		DEBUG_PRINT( F("\t") );
-		if (writeFilename) DEBUG_PRINTLN( fn );
-	}
-
+// Renders one LIST entry into `out` and returns the length the whole line needs, which may
+// exceed `outSize` — the caller decides what a line too long for its buffer becomes, and it
+// cannot decide that from a length already clamped to the buffer. Building the line before
+// any of it is sent is what lets a caller resume a partial write: nine separate print()
+// calls could not, and each of them burns the socket's whole write budget again when the
+// peer's window is shut.
+size_t generateFileLine(char* out, size_t outSize, bool isDirectory, const char* fn, long fz, const char* time, const char* user) {
+	const int n = snprintf(out, outSize, "%s\t%s\t%ld\t%s\t%s\r\n",
+			isDirectory ? "drwxrwsr-x\t2" : "-rw-rw-r--\t1",
+			user, isDirectory ? 4096L : fz, time, fn);
+	return n < 0 ? 0 : (size_t) n;
 }
 
 #if defined(ESP32) || defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
@@ -1793,10 +1749,68 @@ String makeDateTimeStrList(time_t ft, bool dateContracted = false)
 }
 
 // https://files.stairways.com/other/ftp-list-specs-info.txt
-void generateFileLine(FTP_CLIENT_NETWORK_CLASS* data, bool isDirectory, const char* fn, long fz, time_t time, const char* user, bool writeFilename = true) {
-	generateFileLine(data, isDirectory, fn, fz, makeDateTimeStrList(time).c_str(), user, writeFilename);
+size_t generateFileLine(char* out, size_t outSize, bool isDirectory, const char* fn, long fz, time_t time, const char* user) {
+	return generateFileLine(out, outSize, isDirectory, fn, fz, makeDateTimeStrList(time).c_str(), user);
 }
 #endif
+
+// Renders one listing entry into listLine. Callers hand over the values their storage
+// backend exposes; the wire format is the backend-independent part.
+// Takes what snprintf() reported and returns the length to send. A line longer than the buffer
+// is truncated by snprintf without its CRLF, and a listing entry with no line ending merges into
+// the next one at the client, so the ending is restored over the last two bytes.
+uint16_t FtpServer::finishListLine(int rendered)
+{
+  listLineSent = 0;
+  if( rendered <= 0 ) return 0;
+  if( (size_t) rendered < sizeof( listLine )) return (uint16_t) rendered;
+  listLine[ sizeof( listLine ) - 3 ] = '\r';
+  listLine[ sizeof( listLine ) - 2 ] = '\n';
+  listLine[ sizeof( listLine ) - 1 ] = '\0';
+  return (uint16_t) ( sizeof( listLine ) - 1 );
+}
+
+// Renders one listing entry into listLine. Callers hand over the values their storage backend
+// exposes; the wire format is the backend-independent part.
+void FtpServer::buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, const char* time)
+{
+  const int n = isNlst ? snprintf( listLine, sizeof( listLine ), "%s\r\n", fn )
+                       : (int) generateFileLine( listLine, sizeof( listLine ), isDirectory, fn, fz, time, this->user );
+  listLineLen = finishListLine( n );
+  DEBUG_PRINT( listLine );
+}
+
+void FtpServer::buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, time_t time)
+{
+  buildListLine( isNlst, isDirectory, fn, fz, makeDateTimeStrList( time ).c_str());
+}
+
+void FtpServer::buildMlsdLine(bool isDirectory, const char* dtStr, long fz, const char* fn)
+{
+  const int n = snprintf( listLine, sizeof( listLine ), "Type=%s;Modify=%s;Size=%ld; %s\r\n",
+                          isDirectory ? "dir" : "file", dtStr, fz, fn );
+  listLineLen = finishListLine( n );
+  DEBUG_PRINT( listLine );
+}
+
+size_t FtpServer::writeData(const uint8_t* p, size_t len)
+{
+  const size_t n = data.write( p, len );
+  if( n > 0 ) millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
+  return n;
+}
+
+bool FtpServer::sendListLine()
+{
+  if( listLineLen == 0 ) return true;
+  listLineSent += (uint16_t) writeData((const uint8_t*) listLine + listLineSent,
+                                       listLineLen - listLineSent );
+  if( listLineSent < listLineLen ) return false;
+  listLineLen = 0;
+  listLineSent = 0;
+  nbMatch ++;
+  return true;
+}
 
 bool FtpServer::doList()
 {
@@ -1807,6 +1821,10 @@ bool FtpServer::doList()
 #endif
     return false;
   }
+
+  // An entry already rendered owns this round: its directory slot is gone, so the
+  // remainder has to go out before the cursor may move again.
+  if( listLineLen > 0 && ! sendListLine()) return true;
 
   // Determine if current transfer is NLST (name list) so we only send filenames
   bool isNlst = (transferStage == FTP_Nlst);
@@ -1824,12 +1842,7 @@ bool FtpServer::doList()
 	  long fz = long( dir.fileSize());
 	  if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 	  time_t time = dir.fileTime();
-	  if (isNlst) {
-	    data.println(fn.c_str());
-	    DEBUG_PRINTLN(fn);
-	  } else {
-	    generateFileLine(&data, false, fn.c_str(), fz, time, this->user);
-	  }
+	  buildListLine( isNlst, false, fn.c_str(), fz, time );
 #else
 	  long fz = long( fileDir.size());
 	  const char* fnC = fileDir.name();
@@ -1841,16 +1854,11 @@ bool FtpServer::doList()
 	  }
 
 	  time_t time = fileDir.getLastWrite();
-	  if (isNlst) {
-	    data.println(fn);
-	    DEBUG_PRINTLN(fn);
-	  } else {
-	    generateFileLine(&data, false, fn, fz, time, this->user);
-	  }
+	  buildListLine( isNlst, false, fn, fz, time );
 
 #endif
 
-    nbMatch ++;
+    sendListLine();
     return true;
   }
 #elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT
@@ -1897,21 +1905,14 @@ bool FtpServer::doList()
 //		DEBUG_PRINT( F("\t") );
 //		DEBUG_PRINTLN( fileDir.name() );
 	#endif
-	if (isNlst) {
-		data.println(fn);
-		DEBUG_PRINTLN(fn);
-	} else {
-		#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
-			time_t time = dir.fileTime();
-			generateFileLine(&data, dir.isDirectory(), fn, fz, time, this->user);
-		#elif defined(ESP32)
-			time_t time = fileDir.getLastWrite();
-			generateFileLine(&data, fileDir.isDirectory(), fn, fz, time, this->user);
-		#else
-				generateFileLine(&data, fileDir.isDirectory(), fn, fz, "Jan 01 00:00", this->user);
-		#endif
-	}
-    nbMatch ++;
+	#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
+		buildListLine( isNlst, dir.isDirectory(), fn, fz, dir.fileTime());
+	#elif defined(ESP32)
+		buildListLine( isNlst, fileDir.isDirectory(), fn, fz, fileDir.getLastWrite());
+	#else
+		buildListLine( isNlst, fileDir.isDirectory(), fn, fz, "Jan 01 00:00" );
+	#endif
+    sendListLine();
     return true;
   }
 #elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
@@ -1924,22 +1925,12 @@ bool FtpServer::doList()
 
 #if STORAGE_TYPE == STORAGE_SD_MMC
 		time_t time = fileDir.getLastWrite();
-		if (isNlst) {
-			data.println(fn.c_str());
-			DEBUG_PRINTLN(fn);
-		} else {
-			generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), time, this->user);
-		}
+		buildListLine( isNlst, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), time );
 #else
-		if (isNlst) {
-			data.println(fn.c_str());
-			DEBUG_PRINTLN(fn);
-		} else {
-			generateFileLine(&data, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00", this->user);
-		}
+		buildListLine( isNlst, fileDir.isDirectory(), fn.c_str(), long( fileDir.size()), "Jan 01 00:00" );
 #endif
 
-		nbMatch ++;
+		sendListLine();
 		return true;
   }
 
@@ -1950,31 +1941,19 @@ bool FtpServer::doList()
 		String fn = dir.fileName();
 		if (fn[0]=='/') { fn.remove(0, fn.lastIndexOf("/")+1); }
 
-	if (isNlst) {
-		data.println(fn.c_str());
-		DEBUG_PRINTLN(fn);
-	} else {
-		generateFileLine(&data, dir.isDir(), fn.c_str(), long( dir.fileSize()), "Jan 01 00:00", this->user);
-	}
+	buildListLine( isNlst, dir.isDir(), fn.c_str(), long( dir.fileSize()), "Jan 01 00:00" );
 
-    nbMatch ++;
+    sendListLine();
     return true;
   }
 #else
   if( file.openNext( &dir, FTP_FILE_READ_ONLY ))
   {
-	// For storages using file.printName, only send name in NLST mode
-	if (isNlst) {
-		file.printName(&data);
-		data.println();
-	} else {
-		generateFileLine(&data, file.isDir(), "", long( fileSize( file )), "Jan 01 00:00", this->user, false);
-
-		file.printName( & data );
-		data.println();
-	}
+	char nameBuf[ FTP_CWD_SIZE ];
+	file.getName( nameBuf, sizeof( nameBuf ));
+	buildListLine( isNlst, file.isDir(), nameBuf, long( fileSize( file )), "Jan 01 00:00" );
     file.close();
-    nbMatch ++;
+    sendListLine();
     return true;
   }
 #endif
@@ -1999,6 +1978,10 @@ bool FtpServer::doMlsd()
   	DEBUG_PRINTLN(F("Not connected!!"));
     return false;
   }
+  // An entry already rendered owns this round: its directory slot is gone, so the
+  // remainder has to go out before the cursor may move again.
+  if( listLineLen > 0 && ! sendListLine()) return true;
+
   DEBUG_PRINTLN(F("Connected!!"));
 
 #if STORAGE_TYPE == STORAGE_SPIFFS
@@ -2038,21 +2021,8 @@ bool FtpServer::doMlsd()
 		long fz = fileDir.size();
 	#endif
 
-		data.print( F("Type=") );
-
-		data.print( F("file") );
-		data.print( F(";Modify=") ); data.print(dtStr);// data.print( makeDateTimeStr( dtStr, time, time) );
-		data.print( F(";Size=") ); data.print( fz );
-		data.print( F("; ") ); data.println( fn );
-
-		DEBUG_PRINT( F("Type=") );
-		DEBUG_PRINT( F("file") );
-
-		DEBUG_PRINT( F(";Modify=") ); DEBUG_PRINT(dtStr); //DEBUG_PRINT( makeDateTimeStr( dtStr, time, time) );
-		DEBUG_PRINT( F(";Size=") ); DEBUG_PRINT( fz );
-		DEBUG_PRINT( F("; ") ); DEBUG_PRINTLN( fn );
-
-		nbMatch ++;
+		buildMlsdLine( false, dtStr, fz, fn.c_str());
+		sendListLine();
 		return true;
 	  }
 #elif STORAGE_TYPE == STORAGE_LITTLEFS || STORAGE_TYPE == STORAGE_SEEED_SD || STORAGE_TYPE == STORAGE_FFAT
@@ -2102,14 +2072,13 @@ bool FtpServer::doMlsd()
 	#endif
 	#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
 		time_t time = dir.fileTime();
-		generateFileLine(&data, dir.isDirectory(), fn, fz, time, this->user);
+		buildListLine( false, dir.isDirectory(), fn, fz, time );
 	#elif defined(ESP32)
-		time_t time = fileDir.getLastWrite();
-		generateFileLine(&data, fileDir.isDirectory(), fn, fz, time, this->user);
+		buildListLine( false, fileDir.isDirectory(), fn, fz, fileDir.getLastWrite());
 	#else
-		generateFileLine(&data, fileDir.isDirectory(), fn, fz, "Jan 01 00:00", this->user);
+		buildListLine( false, fileDir.isDirectory(), fn, fz, "Jan 01 00:00" );
 	#endif
-    nbMatch ++;
+    sendListLine();
     return true;
   }
 #elif STORAGE_TYPE == STORAGE_SD || STORAGE_TYPE == STORAGE_SD_MMC
@@ -2132,21 +2101,8 @@ bool FtpServer::doMlsd()
 
 
 
-		data.print( F("Type=") );
-
-		data.print( ( fileDir.isDirectory() ? F("dir") : F("file")) );
-		data.print( F(";Modify=") ); data.print(dtStr);// data.print( makeDateTimeStr( dtStr, time, time) );
-		data.print( F(";Size=") ); data.print( fz );
-		data.print( F("; ") ); data.println( fn );
-
-		DEBUG_PRINT( F("Type=") );
-		DEBUG_PRINT( ( fileDir.isDirectory() ? F("dir") : F("file")) );
-
-		DEBUG_PRINT( F(";Modify=") ); DEBUG_PRINT(dtStr); //DEBUG_PRINT( makeDateTimeStr( dtStr, time, time) );
-		DEBUG_PRINT( F(";Size=") ); DEBUG_PRINT( fz );
-		DEBUG_PRINT( F("; ") ); DEBUG_PRINTLN( fn );
-
-		nbMatch ++;
+		buildMlsdLine( fileDir.isDirectory(), dtStr, fz, fn.c_str());
+		sendListLine();
 		return true;
 	  }
 
@@ -2154,11 +2110,10 @@ bool FtpServer::doMlsd()
   if( dir.nextFile())
   {
     char dtStr[ 15 ];
-    data.print( F("Type=") ); data.print( ( dir.isDir() ? F("dir") : F("file")) );
-    data.print( F(";Modify=") ); data.print( makeDateTimeStr( dtStr, dir.fileModDate(), dir.fileModTime()) );
-    data.print( F(";Size=") ); data.print( long( dir.fileSize()) );
-    data.print( F("; ") ); data.println( dir.fileName() );
-    nbMatch ++;
+    String fn = dir.fileName();
+    buildMlsdLine( dir.isDir(), makeDateTimeStr( dtStr, dir.fileModDate(), dir.fileModTime()),
+                   long( dir.fileSize()), fn.c_str());
+    sendListLine();
     return true;
   }
 #else
@@ -2171,18 +2126,11 @@ bool FtpServer::doMlsd()
     DEBUG_PRINTLN(gfmt);
     if( gfmt )
     {
-		  data.print( F("Type=") ); data.print( ( file.isDir() ? F("dir") : F("file")) );
-		  data.print( F(";Modify=") ); data.print( makeDateTimeStr( dtStr, filelwd, filelwt ) );
-		  data.print( F(";Size=") ); data.print( long( fileSize( file )) ); data.print( F("; ") );
-		  file.printName( & data );
-		  data.println();
-
-		  DEBUG_PRINT( F("Type=") ); DEBUG_PRINT( ( file.isDir() ? F("dir") : F("file")) );
-		  DEBUG_PRINT( F(";Modify=") ); DEBUG_PRINT( makeDateTimeStr( dtStr, filelwd, filelwt ) );
-		  DEBUG_PRINT( F(";Size=") ); DEBUG_PRINT( long( fileSize( file )) ); DEBUG_PRINT( F("; ") );
-//		  DEBUG_PRINT(file.name());
-		  DEBUG_PRINTLN();
-      nbMatch ++;
+		  char nameBuf[ FTP_CWD_SIZE ];
+		  file.getName( nameBuf, sizeof( nameBuf ));
+		  buildMlsdLine( file.isDir(), makeDateTimeStr( dtStr, filelwd, filelwt ),
+		                 long( fileSize( file )), nameBuf );
+		  sendListLine();
     }
     file.close();
     return gfmt;

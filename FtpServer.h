@@ -502,6 +502,10 @@
 #define FTP_CWD_SIZE FF_MAX_LFN+8 // max size of a directory name
 #define FTP_FIL_SIZE FF_MAX_LFN   // max size of a file name
 #define FTP_CRED_SIZE 16          // max size of username and password
+// One rendered listing entry: the two names at the limits above, the widest a long prints,
+// the date makeDateTimeStrList() builds in its own char[25], the "Type=…;Size=…; " prefix,
+// CRLF and the terminator.
+#define FTP_LIST_LINE_SIZE (FTP_FIL_SIZE + FTP_CRED_SIZE + 64)
 #define FTP_NULLIP() IPAddress(0,0,0,0)
 
 enum ftpCmd { FTP_Stop = 0,       //  In this stage, stop any connection
@@ -585,6 +589,18 @@ private:
   bool    doStore();
   bool    doList();
   bool    doMlsd();
+  // Sends what is still pending of listLine. True once the whole entry is away — only then
+  // is it counted in nbMatch, and any byte accepted pushes the idle deadline out, so a
+  // listing rides out a shut window exactly as a retrieve does.
+  bool    sendListLine();
+  // The one path from this server to the data socket. Returns what the socket took, and a
+  // non-zero take is what pushes the idle deadline out — so no transfer path can send bytes
+  // without the deadline noticing, or move the deadline without sending any.
+  size_t  writeData(const uint8_t* p, size_t len);
+  void    buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, const char* time);
+  void    buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, time_t time);
+  void    buildMlsdLine(bool isDirectory, const char* dtStr, long fz, const char* fn);
+  uint16_t finishListLine(int rendered);
   void    closeTransfer();
   // Ends a transfer as FAILED: closes the file and the directory, replies exactly once —
   // `reply` replaces the default "426 Transfer aborted" — and fires FTP_TRANSFER_ERROR for the
@@ -833,6 +849,14 @@ private:
            dataPort;
   uint16_t iCL;                       // pointer to cmdLine next incoming char
   uint16_t nbMatch;
+
+  // One listing entry, rendered whole before any of it is sent. The directory cursor has
+  // already moved past the entry by then, so a line the peer only half accepts has to be
+  // resumed from here — re-reading it is impossible, and a half line left in the stream
+  // corrupts every entry after it.
+  char     listLine[ FTP_LIST_LINE_SIZE ];
+  uint16_t listLineLen = 0;                 // rendered length; 0 = no entry pending
+  uint16_t listLineSent = 0;                // how much of it the socket has taken
 
   uint32_t millisDelay,               //
            millisEndConnection,       //
