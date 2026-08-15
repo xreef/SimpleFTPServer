@@ -448,13 +448,15 @@ uint8_t FtpServer::handleFTP() {
 
 		// Out of the chain above, whose tail this was: a running transfer always took its own
 		// branch, so the deadline was never reached — and doRetrieve() now waits a stalled peer
-		// out instead of aborting, leaving nothing else to end it. RETR refreshes this deadline
-		// as it sends; the other types never do, so bounding them would kill them mid-progress.
-		const bool in_retrieve = (transferStage == FTP_Retrieve);
-		if (cmdStage > FTP_Client && (transferStage == FTP_Close || in_retrieve)
+		// out instead of aborting, leaving nothing else to end it. RETR and the listings both
+		// refresh this deadline as they send, so it ends only what stopped sending; STOR does
+		// not refresh it and stays out of scope rather than die mid-progress.
+		const bool in_transfer = (transferStage == FTP_Retrieve || transferStage == FTP_List
+				|| transferStage == FTP_Nlst || transferStage == FTP_Mlsd);
+		if (cmdStage > FTP_Client && (transferStage == FTP_Close || in_transfer)
 				&& !((int32_t) (millisEndConnection - millis()) > 0)) {
 			DEBUG_PRINTLN(F("Timeout"));
-			if (in_retrieve) {
+			if (in_transfer) {
 				// NOT closeTransfer(): that answers 226. abortTransfer() replies 426 and fires
 				// FTP_TRANSFER_ERROR, which releases what the app took.
 				abortTransfer();
