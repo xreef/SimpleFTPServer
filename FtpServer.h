@@ -497,10 +497,18 @@
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
-#define FF_MAX_LFN 255            // max size of a long file name
-#define FTP_CMD_SIZE FF_MAX_LFN+8 // max size of a command
-#define FTP_CWD_SIZE FF_MAX_LFN+8 // max size of a directory name
-#define FTP_FIL_SIZE FF_MAX_LFN   // max size of a file name
+// fatfs owns the name FF_MAX_LFN and defines it from CONFIG_FATFS_MAX_LFN, so a translation
+// unit that reaches both headers takes a redefinition warning. FTP_LEGACY_FF_MAX_LFN restores
+// the old name for a sketch that spells it and never reaches fatfs.
+#ifdef FTP_LEGACY_FF_MAX_LFN
+#  define FF_MAX_LFN  255
+#  define FTP_MAX_LFN FF_MAX_LFN
+#else
+#  define FTP_MAX_LFN 255          // max size of a long file name
+#endif
+#define FTP_CMD_SIZE FTP_MAX_LFN+8 // max size of a command
+#define FTP_CWD_SIZE FTP_MAX_LFN+8 // max size of a directory name
+#define FTP_FIL_SIZE FTP_MAX_LFN   // max size of a file name
 #define FTP_CRED_SIZE 16          // max size of username and password
 // One rendered listing entry: the two names at the limits above, the widest a long prints,
 // the date makeDateTimeStrList() builds in its own char[25], the "Type=…;Size=…; " prefix,
