@@ -497,11 +497,23 @@
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
-#define FF_MAX_LFN 255            // max size of a long file name
-#define FTP_CMD_SIZE FF_MAX_LFN+8 // max size of a command
-#define FTP_CWD_SIZE FF_MAX_LFN+8 // max size of a directory name
-#define FTP_FIL_SIZE FF_MAX_LFN   // max size of a file name
+// fatfs owns the name FF_MAX_LFN and defines it from CONFIG_FATFS_MAX_LFN, so a translation
+// unit that reaches both headers takes a redefinition warning. FTP_LEGACY_FF_MAX_LFN restores
+// the old name for a sketch that spells it and never reaches fatfs.
+#ifdef FTP_LEGACY_FF_MAX_LFN
+#  define FF_MAX_LFN  255
+#  define FTP_MAX_LFN FF_MAX_LFN
+#else
+#  define FTP_MAX_LFN 255          // max size of a long file name
+#endif
+#define FTP_CMD_SIZE FTP_MAX_LFN+8 // max size of a command
+#define FTP_CWD_SIZE FTP_MAX_LFN+8 // max size of a directory name
+#define FTP_FIL_SIZE FTP_MAX_LFN   // max size of a file name
 #define FTP_CRED_SIZE 16          // max size of username and password
+// One rendered listing entry: the two names at the limits above, the widest a long prints,
+// the date makeDateTimeStrList() builds in its own char[25], the "Type=…;Size=…; " prefix,
+// CRLF and the terminator.
+#define FTP_LIST_LINE_SIZE (FTP_FIL_SIZE + FTP_CRED_SIZE + 64)
 #define FTP_NULLIP() IPAddress(0,0,0,0)
 
 enum ftpCmd { FTP_Stop = 0,       //  In this stage, stop any connection
@@ -516,7 +528,8 @@ enum ftpTransfer { FTP_Close = 0, // In this stage, close data channel
                    FTP_Store,     //  store file
                    FTP_List,      //  list of files
                    FTP_Nlst,      //  list of name of files
-                   FTP_Mlsd };    //  listing for machine processing
+                   FTP_Mlsd,      //  listing for machine processing
+                   FTP_Custom };  //  caller-driven cooperative transfer (beginCustomTransfer)
 
 enum ftpDataConn { FTP_NoConn = 0,// No data connection
                    FTP_Pasive,    // Passive type
@@ -545,6 +558,76 @@ enum FtpTransferOperation {
 	  FTP_UPLOAD_ERROR = 5
 };
 
+class FtpServer;
+
+// A caller-driven data transfer, streamed cooperatively — one chunk per handleFTP() call — so
+// the control channel stays responsive and nothing blocks. Use it for outputs with no standard
+// FTP equivalent (a multi-file bundle, on-the-fly compression), started from a command hook via
+// FtpResponse::beginCustomTransfer().
+struct CustomTransfer
+{
+  enum TransferResult {
+  	TR_DONE,      // transfer completed successfully
+	TR_ABORTED,   // client aborted, connection lost, or a chunk reported an error
+  };
+
+  // Label reported to setTransferCallback on start/progress/end — a custom transfer has no
+  // `file`, so it supplies its own name (e.g. the download filename). May be nullptr.
+  const char * name;
+
+  // Produce and send the next chunk into `data`, cooperatively (must NOT block). Return:
+  //   >0  bytes written this tick — reported as progress; transfer continues
+  //    0  wrote nothing, not done — yield (e.g. socket full); retried next tick, no progress
+  //   -1  done                    — TR_DONE
+  //  <-1  error                   — TR_ABORTED
+  // The byte count drives the same progress callback the built-in RETR fires, so client
+  // progress and a host stall-watchdog keyed on setTransferCallback both work unchanged.
+  int (*sendChunk)( void * ctx, Client & data );
+
+  // Finalize — called EXACTLY once for every outcome (done, aborted, connection lost), so it
+  // owns cleanup (close files, free buffers). Return a custom final response line, or
+  // nullptr/"" for the library default (226 on success, 426 otherwise). The returned pointer
+  // must outlive the call (a literal, static, or a buffer owned by ctx).
+  const char * (*onEnd)( void * ctx, TransferResult result );
+};
+
+// How a command hook reacts to the current command (Express-`res` style). A deliberately
+// narrow handle: it exposes only the operations below, so a hook cannot begin()/end()/
+// handleFTP() or rebind itself. FtpServer builds one and passes it to the hook; the methods
+// act on the server's internals through friendship.
+class FtpResponse
+{
+public:
+  // Send one FTP response line (e.g. "550 Read-only.") terminated by CRLF. Sending a reply
+  // from a command hook marks the command handled, so the built-in handler is skipped.
+  void reply( const char * line );
+
+  // Replace the command currently being processed; the library then dispatches the rewrite
+  // instead of the original (e.g., map "XLATEST" to "RETR <file>" and reuse the built-in
+  // download). Copies are bound to the internal buffers, so cmd/param of any length are
+  // safe. Note: the rewrite is NOT re-filtered by the hook — apply your policy to the target
+  // verb, not just the incoming one.
+  void rewriteCommand( const char * cmd, const char * param );
+
+  // Whether the client has completed USER/PASS login.
+  bool isAuthenticated() const;
+
+  // Force the login state, so a hook can implement its own authentication (a token, an IP
+  // allow-list, an extra factor) and have the rest of the session honor it.
+  void setAuthenticated( bool authenticated );
+
+  // Start a caller-driven data transfer from within a command hook: opens the data connection
+  // (sends "150"), then drives xfer->sendChunk once per handleFTP() call until it finishes and
+  // calls xfer->onEnd on any termination. `ctx` is passed to both callbacks. Returns false if
+  // the data connection could not be opened. Marks the command as handled.
+  bool beginCustomTransfer( const CustomTransfer * xfer, void * ctx );
+
+private:
+  explicit FtpResponse( FtpServer & server ) : server_( server ) {}
+  FtpServer & server_;
+  friend class FtpServer;
+};
+
 class FtpServer
 {
 public:
@@ -569,10 +652,28 @@ public:
 		_transferCallback = _transferCallbackParam;
 	}
 
+	// Install a hook invoked for every command BEFORE the built-in dispatch. The hook is
+	// void; its intent is inferred from what it does with the FtpResponse: reply() takes the
+	// command over (the built-in is skipped), rewriteCommand() changes which command runs,
+	// and doing nothing lets the original run. The single extension point for rejecting,
+	// rewriting, implementing, or authorizing commands.
+	void setCommandHandler(void (*_commandHandlerParam)(FtpResponse& res, const char* command, const char* parameter) )
+	{
+		_commandHandler = _commandHandlerParam;
+	}
+
 private:
   // Use 32-bit sizes for callbacks to avoid truncation on platforms where "unsigned int" is 16-bit (AVR)
   void (*_callback)(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace){};
   void (*_transferCallback)(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize){};
+  void (*_commandHandler)(FtpResponse& res, const char* command, const char* parameter){};
+  bool _replied = false;   // set by FtpResponse::reply() during a hook call; drives handled-vs-pass
+  friend class FtpResponse;
+
+  const CustomTransfer * _xfer = nullptr;   // active caller-driven transfer (FTP_Custom), or null
+  void *                 _customCtx = nullptr;
+  bool doCustom();                          // push one chunk; false when the transfer ends
+  void finishCustom( CustomTransfer::TransferResult result ); // onEnd + final response + close, exactly once
 
   void    iniVariables();
   void    clientConnected();
@@ -585,8 +686,23 @@ private:
   bool    doStore();
   bool    doList();
   bool    doMlsd();
+  // Sends what is still pending of listLine. True once the whole entry is away — only then
+  // is it counted in nbMatch, and any byte accepted pushes the idle deadline out, so a
+  // listing rides out a shut window exactly as a retrieve does.
+  bool    sendListLine();
+  // The one path from this server to the data socket. Returns what the socket took, and a
+  // non-zero take is what pushes the idle deadline out — so no transfer path can send bytes
+  // without the deadline noticing, or move the deadline without sending any.
+  size_t  writeData(const uint8_t* p, size_t len);
+  void    buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, const char* time);
+  void    buildListLine(bool isNlst, bool isDirectory, const char* fn, long fz, time_t time);
+  void    buildMlsdLine(bool isDirectory, const char* dtStr, long fz, const char* fn);
+  uint16_t finishListLine(int rendered);
   void    closeTransfer();
-  void    abortTransfer();
+  // Ends a transfer as FAILED: closes the file and the directory, replies exactly once —
+  // `reply` replaces the default "426 Transfer aborted" — and fires FTP_TRANSFER_ERROR for the
+  // stages that carry a file, so a listing that loses its data connection reports no transfer.
+  void    abortTransfer(const __FlashStringHelper* reply = nullptr);
   bool    makePath( char * fullName, char * param = nullptr );
   bool    makeExistsPath( char * path, char * param = nullptr );
   bool    openDir( FTP_DIR * pdir );
@@ -830,6 +946,14 @@ private:
            dataPort;
   uint16_t iCL;                       // pointer to cmdLine next incoming char
   uint16_t nbMatch;
+
+  // One listing entry, rendered whole before any of it is sent. The directory cursor has
+  // already moved past the entry by then, so a line the peer only half accepts has to be
+  // resumed from here — re-reading it is impossible, and a half line left in the stream
+  // corrupts every entry after it.
+  char     listLine[ FTP_LIST_LINE_SIZE ];
+  uint16_t listLineLen = 0;                 // rendered length; 0 = no entry pending
+  uint16_t listLineSent = 0;                // how much of it the socket has taken
 
   uint32_t millisDelay,               //
            millisEndConnection,       //
