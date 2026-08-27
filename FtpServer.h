@@ -497,7 +497,10 @@
 #define FTP_DATA_PORT_DFLT 20     // Default data port in active mode
 #define FTP_DATA_PORT_PASV 50009  // Data port in passive mode
 
+#ifndef FF_MAX_LFN
 #define FF_MAX_LFN 255            // max size of a long file name
+#endif
+
 #define FTP_CMD_SIZE FF_MAX_LFN+8 // max size of a command
 #define FTP_CWD_SIZE FF_MAX_LFN+8 // max size of a directory name
 #define FTP_FIL_SIZE FF_MAX_LFN   // max size of a file name
