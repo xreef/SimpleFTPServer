@@ -20,8 +20,8 @@
  */
 #include <SdFat.h>
 #include <sdios.h>
-#include <SimpleFtpServer.h>
-#include <EthernetEnc.h>
+#include <SimpleFTPServer.h>
+#include <EthernetENC.h>
 
 // Ethernet CS
 #define ETHERNET_CS_PIN PA3

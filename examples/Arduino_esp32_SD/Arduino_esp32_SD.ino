@@ -35,14 +35,17 @@ FtpServer ftpServer;
 
 void setup() {
   // Initialize Serial Monitor
-  Serial.begin(9600);
-  while (!Serial) {
-    // Wait for serial port to connect (required for native USB ports)
+  Serial.begin(115200);
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
   }
 
   // Connect to WiFi network
   Serial.println("Connecting to WiFi...");
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");

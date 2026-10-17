@@ -8,6 +8,7 @@
  */
 
 #include "Arduino.h"
+#include <WiFi.h>
 #include "FS.h"
 #include "FFat.h"
 
@@ -22,7 +23,7 @@ const char* password_AP = "password";
 
 FtpServer ftpSrv;   //set #define FTP_DEBUG in ESP8266FtpServer.h to see ftp verbose on serial
 
-void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace){
+void _callback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace){
   switch (ftpOperation) {
     case FTP_CONNECT:
       Serial.println(F("FTP: Connected!"));
@@ -31,19 +32,19 @@ void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int t
       Serial.println(F("FTP: Disconnected!"));
       break;
     case FTP_FREE_SPACE_CHANGE:
-      Serial.printf("FTP: Free space change, free %u of %u!\n", freeSpace, totalSpace);
+      Serial.printf("FTP: Free space change, free %lu of %lu!\n", (unsigned long)freeSpace, (unsigned long)totalSpace);
       break;
     default:
       break;
   }
 };
-void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize){
+void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize){
   switch (ftpOperation) {
     case FTP_UPLOAD_START:
       Serial.println(F("FTP: Upload start!"));
       break;
     case FTP_UPLOAD:
-      Serial.printf("FTP: Upload of file %s byte %u\n", name, transferredSize);
+      Serial.printf("FTP: Upload of file %s byte %lu\n", name, (unsigned long)transferredSize);
       break;
     case FTP_TRANSFER_STOP:
       Serial.println(F("FTP: Finish transfer!"));
@@ -73,10 +74,15 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsi
 
 void setup(void){
   Serial.begin(115200);
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
+  }
 
   //AP mode
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid_AP, password_AP);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
   delay(1000);
   //IPAddress IP = IPAddress (10, 10, 10, 1);
   //IPAddress NMask = IPAddress (255, 255, 255, 0);
@@ -90,6 +96,7 @@ void setup(void){
 #ifdef STA_MODE
     // STA mode
     WiFi.begin(ssid, password);
+    WiFi.setTxPower(WIFI_POWER_11dBm);
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);

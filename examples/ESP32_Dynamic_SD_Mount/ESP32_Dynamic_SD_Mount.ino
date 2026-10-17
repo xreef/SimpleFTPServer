@@ -1,138 +1,142 @@
 /*
+ * SimpleFTPServer - Dynamic SD Card Mounting Example (Standard SD Library)
  *
- * FTP SERVER
+ * This example demonstrates how to mount the SD card only when an FTP
+ * connection is established, and unmount it when the connection is closed.
  *
+ * This is useful when:
+ * - The SD card is shared between multiple devices
+ * - You want to minimize power consumption
+ * - You need to access the SD card from another device
  *
- * FTP SERVER FOR W5500 ETHERNET SHIELD WITH SD
+ * Hardware:
+ * - ESP32 board
+ * - SD card module connected via SPI
  *
- * Created by Renzo Mischianti (www.mischianti.org)
+ * Related Issue: #79
+ * https://github.com/xreef/SimpleFTPServer/issues/79
  *
- * https://www.mischianti.org/2020/02/08/ftp-server-on-esp8266-and-esp32/
- *
- *
- * The MIT License (MIT)
- *
- * Copyright (c) 2020 Renzo Mischianti www.mischianti.org All right reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
-
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
+ * Author: Renzo Mischianti
+ * www.mischianti.org
  */
 
+#include <WiFi.h>
 #include <SPI.h>
-
-#define FTP_SERVER_DEBUG
-// Select the NetworkInterface:
-//   - NETWORK_W5100
-//   - NETWORK_W5500
-//   - NETWORK_ENC28J60
-#define FTP_SERVER_NETWORK_TYPE_ARDUINO NETWORK_W5500
-
-// Select the StorageType:
-//   - STORAGE_SD
-#define DEFAULT_STORAGE_TYPE_ARDUINO STORAGE_SD
-
+#include <SD.h>
 #include <SimpleFTPServer.h>
 
-// FTP server credentials
-const char* ftp_user = "myuser";
-const char* ftp_pass = "mypass";
+// WiFi credentials
+const char* WIFI_SSID = "your-ssid";
+const char* WIFI_PASSWORD = "your-password";
 
-// Network configuration
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-IPAddress ip(192, 168, 1, 177);
+// FTP credentials
+const char* FTP_USER = "admin";
+const char* FTP_PASS = "admin";
 
-// SD card chip select pin
-const int sd_cs_pin = 4;
+// SD Card configuration
+const int SD_CS_PIN = 5;  // Adjust to your wiring
 
-FtpServer ftpSrv;
+// FTP Server
+FtpServer ftpServer;
 
-bool sd_ok = false;
+// SD Card state
+bool sdCardMounted = false;
+
+// Forward declaration
+void ftpCallback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace);
 
 void setup() {
   Serial.begin(115200);
-
-  // Ensure SPI and CS pins are in a safe state for Arduino Mega
-  // On AVR the SS pin (53 on Mega) must be set as OUTPUT to keep SPI in master mode
-  pinMode(53, OUTPUT);
-  digitalWrite(53, HIGH); // keep SS high by default
-
-  // Typical Ethernet shield uses pin 10 as Ethernet CS
-  pinMode(10, OUTPUT);
-  digitalWrite(10, HIGH);
-
-  // SD card chip select pin - put it HIGH while initializing Ethernet
-  pinMode(sd_cs_pin, OUTPUT);
-  digitalWrite(sd_cs_pin, HIGH);
-
-  // ---- ETHERNET ----
-  Serial.println("Starting Ethernet...");
-
-  const int ethRetries = 3;
-  bool eth_ok = false;
-  for (int i = 0; i < ethRetries; ++i) {
-    Serial.print("Ethernet.begin attempt "); Serial.print(i+1); Serial.println("...");
-    if (Ethernet.begin(mac) == 0) {
-      Serial.println("Failed to configure Ethernet using DHCP");
-      // try to configure using IP address instead of DHCP:
-      Ethernet.begin(mac, ip);
-    }
-
-    // small delay to let interface come up
-    delay(1000);
-
-    IPAddress local = Ethernet.localIP();
-    Serial.print("Local IP after attempt: ");
-    Serial.println(local);
-    if (local[0] != 0 || local[1] != 0 || local[2] != 0 || local[3] != 0) {
-      eth_ok = true;
-      break;
-    }
-    Serial.println("Ethernet not ready yet, retrying...");
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
   }
+  delay(200);
 
-  if (!eth_ok) {
-    Serial.println("Warning: Ethernet may not be initialized correctly. Continuing anyway.");
+  Serial.println("\n\n=================================");
+  Serial.println("Dynamic SD Mounting (Standard SD)");
+  Serial.println("=================================\n");
+
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
+  Serial.println(" Connected!");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 
-  Serial.print("FTP Server IP address: ");
-  Serial.println(Ethernet.localIP());
+  // Initialize SPI bus (do not mount SD card yet - it will be mounted on FTP connect)
+  SPI.begin();
+  Serial.println("\nSD card NOT mounted at startup");
+  Serial.println("It will be mounted when FTP client connects\n");
 
-  // ---- SD CARD ----
-  Serial.println("Initializing SD card...");
+  // Set up FTP callback to handle mount/unmount
+  ftpServer.setCallback(ftpCallback);
 
-  const int sdRetries = 3;
-  for (int i = 0; i < sdRetries; ++i) {
-    Serial.print("SD.begin attempt "); Serial.print(i+1); Serial.println("...");
-    // Ensure SD CS is asserted high before initialization of other devices
-    digitalWrite(sd_cs_pin, HIGH);
-    delay(50);
-    if (SD.begin(sd_cs_pin)) {
-      sd_ok = true;
-      break;
-    }
-  }
-  Serial.println("initialization done.");
+  // Start FTP server (without mounting SD)
+  ftpServer.begin(FTP_USER, FTP_PASS);
 
-  // ---- FTP SERVER ----
-  ftpSrv.begin(ftp_user, ftp_pass);
+  Serial.println("FTP server started");
+  Serial.println("Waiting for FTP connection...");
+  Serial.println("=================================\n");
 }
 
 void loop() {
-  ftpSrv.handleFTP();
+  ftpServer.handleFTP();
+}
+
+// Callback function called on FTP events
+void ftpCallback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace) {
+  switch (ftpOperation) {
+    case FTP_CONNECT:
+      Serial.println("\n>>> FTP Client connected!");
+
+      // Mount SD card when client connects
+      if (!sdCardMounted) {
+        Serial.print(">>> Mounting SD card... ");
+        if (SD.begin(SD_CS_PIN)) {
+          sdCardMounted = true;
+          Serial.println("SUCCESS");
+        } else {
+          Serial.println("FAILED!");
+          Serial.println(">>> SD card mount error. Check wiring and card.");
+        }
+      } else {
+        Serial.println(">>> SD card already mounted");
+      }
+      break;
+
+    case FTP_DISCONNECT:
+      Serial.println("\n>>> FTP Client disconnected!");
+
+      // Unmount SD card when client disconnects
+      if (sdCardMounted) {
+        Serial.print(">>> Unmounting SD card... ");
+        SD.end();
+        sdCardMounted = false;
+        Serial.println("DONE");
+        Serial.println(">>> SD card is now available for other devices");
+      }
+
+      Serial.println("\nWaiting for next FTP connection...");
+      Serial.println("=================================\n");
+      break;
+
+    case FTP_FREE_SPACE_CHANGE:
+      Serial.println(">>> Storage space changed");
+      Serial.print(">>> Free space: ");
+      Serial.print((unsigned long)freeSpace);
+      Serial.print(" kB / Total: ");
+      Serial.print((unsigned long)totalSpace);
+      Serial.println(" kB");
+      break;
+
+    default:
+      break;
+  }
 }

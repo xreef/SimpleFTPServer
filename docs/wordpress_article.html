@@ -1,0 +1,614 @@
+<!-- wp:shortcoder/shortcoder -->
+[sc name="buttonsupportforum" buttonurl="https://mischianti.org/forums/forum/mischiantis-libraries/simple-ftp-server/" buttonlabel="Support forum" ][/sc]
+<!-- /wp:shortcoder/shortcoder -->
+
+<!-- wp:paragraph -->
+<p>Managing files on an SD card connected to an Arduino often means physically removing the card, plugging it into a computer, and copying files back and forth. This process can be tedious, especially for projects mounted in enclosures or hard-to-reach places. But what if you could manage those files remotely, over your local network, just like you would with a web server? That's exactly what the <strong>SimpleFTPServer</strong> library enables.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"lightbox":{"enabled":true},"id":33595,"sizeSlug":"large","linkDestination":"none","align":"center"} -->
+<figure class="wp-block-image aligncenter size-large"><img src="https://mischianti.org/wp-content/uploads/2025/10/How-to-Arduino-FTP-Server-UNO-Mega-Ethernet-1024x551.jpg" alt="How to Build an Arduino FTP Server: UNO/Mega, Ethernet &amp; SD" class="wp-image-33595"/><figcaption class="wp-element-caption">How to Build an Arduino FTP Server: UNO/Mega, Ethernet & SD</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>In this tutorial, I'll guide you through setting up a fully functional FTP server on an <strong>Arduino UNO or Mega</strong> using a standard <strong>W5500 Ethernet shield</strong> and a MicroSD card. We will use the excellent <a href="https://github.com/greiman/SdFat" target="_blank" rel="noreferrer noopener">SdFat library</a> for robust and high-performance SD card access, which is a must for serious projects.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Why an FTP Server on Your Arduino?</h2>
+<!-- /wp:heading -->
+
+<!-- wp:image {"lightbox":{"enabled":true},"id":33586,"sizeSlug":"large","linkDestination":"none","align":"center"} -->
+<figure class="wp-block-image aligncenter size-large"><img src="https://mischianti.org/wp-content/uploads/2025/10/Arduino-FTP-transfer-schema-1024x533.jpg" alt="Arduino FTP Transfer Schematic" class="wp-image-33586"/><figcaption class="wp-element-caption">Arduino FTP Transfer Schematic</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>The primary advantage is <strong>remote file management</strong>. Imagine your Arduino is serving a web page from an SD card. If you want to update the HTML, CSS, or JavaScript files, you would typically have to take the system offline. With an FTP server, you can:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li><strong>Upload</strong> new web pages or data files directly to the SD card.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Download</strong> data logs or sensor readings that your Arduino has been collecting.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Delete</strong> old files or <strong>rename</strong> them without physical access.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>List</strong> the contents of the SD card to check its status.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:paragraph -->
+<p>This is incredibly useful for IoT projects, data loggers, and any application where the Arduino needs to work with files that change over time.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Hardware and Software Prerequisites</h2>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li>An <strong>Arduino UNO or Mega</strong>. The Mega is recommended for its larger memory, which is helpful for network applications.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>A <strong>W5100 or W5500 Ethernet Shield</strong> with an integrated MicroSD card slot, OR standalone Ethernet and SD modules.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>A formatted <strong>MicroSD card</strong> (FAT32 is best).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>An Ethernet cable and a connection to your router.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Arduino IDE</strong> installed on your computer.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Library Installation</h2>
+<!-- /wp:heading -->
+
+<!-- wp:shortcoder/shortcoder -->
+[sc name="github_library_box" library="SimpleFTPServer" ][/sc]
+<!-- /wp:shortcoder/shortcoder -->
+
+<!-- wp:paragraph -->
+<p>You'll need three libraries for this project. You can install all of them through the Arduino IDE's Library Manager (<em>Sketch -> Include Library -> Manage Libraries...</em>):</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list {"ordered":true} -->
+<ol class="wp-block-list"><!-- wp:list-item -->
+    <li><strong>SimpleFTPServer</strong>: Search for "SimpleFTPServer" and install the library by me, Renzo Mischianti.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>SdFat</strong>: Search for "SdFat" by Bill Greiman and install the latest version. This is a much more powerful and reliable alternative to the standard SD library.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Ethernet</strong>: This library is usually pre-installed with the Arduino IDE, but ensure it's up to date.</li>
+    <!-- /wp:list-item --></ol>
+<!-- /wp:list -->
+
+<!-- wp:image {"lightbox":{"enabled":true},"id":33581,"sizeSlug":"large","linkDestination":"none","align":"center"} -->
+<figure class="wp-block-image aligncenter size-large"><img src="https://mischianti.org/wp-content/uploads/2025/10/SimpleFTPServer-ArduinoIDE-library-FTP-Server-1024x784.jpg" alt="The SimpleFTPServer library shown within the Arduino IDE\'s Library Manager" class="wp-image-33581"/><figcaption class="wp-element-caption">The SimpleFTPServer library shown within the Arduino IDE's Library Manager</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Configuration: SD vs. SdFat and FtpServerKey.h</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The SimpleFTPServer library is highly configurable through the <code>FtpServerKey.h</code> file, located inside the library's folder. This file allows you to select the filesystem, network interface, and other core settings without modifying the library's source code.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Choosing a Filesystem: SD vs. SdFat</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>For Arduino UNO and Mega, you have two primary choices for SD card access. The choice has significant implications for performance and memory usage.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">The Standard <code>SD</code> Library</h4>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li><strong>Pros</strong>: It's bundled with the Arduino IDE and uses slightly less RAM and program memory. This can be a critical advantage on an <strong>Arduino UNO</strong>, where memory is extremely limited (only 2KB of RAM).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Cons</strong>: It is significantly slower, less reliable, and, most importantly, <strong>only supports 8.3 filenames</strong> (e.g., <code>MYFILE.TXT</code>). Long filenames are not supported, which is a major limitation for modern use cases like web servers.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">The <code>SdFat</code> Library</h4>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li><strong>Pros</strong>: It is the modern, high-performance standard. It's much faster, more reliable, supports <strong>long filenames</strong>, and has better error handling.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Cons</strong>: It uses more RAM and program memory than the standard SD library.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:paragraph -->
+<p><strong>Recommendation:</strong></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li>On an <strong>Arduino Mega</strong>, always use <strong><code>SdFat</code></strong>. The performance benefits are significant, and the Mega has enough RAM to handle it comfortably.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>On an <strong>Arduino UNO</strong>, the choice is a trade-off. If your project is very simple and you are running out of RAM, the standard <strong><code>SD</code></strong> library might be necessary. However, for any serious application, it's worth trying to optimize your code to free up enough memory for <strong><code>SdFat</code></strong>.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:table {"className":"table-mischianti mischianti-table-top is-style-regular mischianti-table-left"} -->
+<figure class="wp-block-table table-mischianti mischianti-table-top is-style-regular mischianti-table-left"><table class="has-fixed-layout"><thead><tr><td></td><td><strong>Standard SD Library</strong></td><td><strong>SdFat Library</strong></td></tr></thead><tbody><tr><td><strong>Filename Support</strong></td><td>📄 <strong>8.3 Format Only</strong> (e.g., <code>MYFILE.TXT</code>)</td><td>📑 <strong>Long Filenames (LFN)</strong> (e.g., <code>my_long_filename.html</code>)</td></tr><tr><td><strong>Performance</strong></td><td>🐢 Slower, less optimized.</td><td>🚀 High-performance, faster read/write speeds.</td></tr><tr><td><strong>Memory Usage</strong></td><td>📉 Lower RAM and Program Memory.</td><td>📈 Higher RAM and Program Memory.</td></tr><tr><td><strong>Reliability</strong></td><td>👍 Basic. Less robust error handling.</td><td>✅ Very high. Actively maintained, better error handling.</td></tr><tr><td><strong>Recommendation</strong></td><td>👉 <strong>Arduino UNO</strong> (if memory is low)</td><td>⭐ <strong>Arduino Mega</strong> (Recommended)</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">How to Configure the Library</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>To switch between filesystems, you need to edit <code>FtpServerKey.h</code>. You can find this file inside your Arduino libraries folder (e.g., <code>Documents/Arduino/libraries/SimpleFTPServer/FtpServerKey.h</code>).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Open the file and find the section for <strong>Standard AVR Arduino configuration</strong>:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:syntaxhighlighter/code {"language":"arduino"} -->
+<pre class="wp-block-syntaxhighlighter-code">// In FtpServerKey.h
+
+// Standard AVR Arduino configuration
+#ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
+	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO 	NETWORK_W5100
+// Change this line to switch between SD and SdFat2
+// 	#define DEFAULT_STORAGE_TYPE_ARDUINO  STORAGE_SD // Standard, low-RAM, 8.3 filenames only
+	#define DEFAULT_STORAGE_TYPE_ARDUINO  STORAGE_SDFAT2 // Recommended, high-performance, long filenames
+#endif</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:paragraph -->
+<p>To use the standard <strong>SD</strong> library, comment out <code>STORAGE_SDFAT2</code> and uncomment <code>STORAGE_SD</code>:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:syntaxhighlighter/code {"language":"cpp"} -->
+<pre class="wp-block-syntaxhighlighter-code">#define DEFAULT_STORAGE_TYPE_ARDUINO 			STORAGE_SD</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:paragraph -->
+<p>Remember, after changing this, you must also update your sketch to include the correct header (<code>#include &lt;SD.h&gt;</code>) and use the correct object (<code>SDClass sd;</code>).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Wiring and Connections</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Both the Ethernet chip and the SD card communicate using the SPI protocol, so they share the MISO, MOSI, and SCK pins. However, they must have separate Chip Select (CS) pins.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Using an Ethernet Shield</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>This is the easiest setup. Simply stack the Ethernet shield onto your Arduino. The shield is designed to handle the connections automatically.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li>The <strong>W5x00 Ethernet chip</strong> uses pin <strong>10</strong> as its Chip Select (CS).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>The <strong>SD card slot</strong> on the shield almost always uses pin <strong>4</strong> as its Chip Select (CS).</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:image {"lightbox":{"enabled":true},"id":33481,"sizeSlug":"large","linkDestination":"none","align":"center"} -->
+<figure class="wp-block-image aligncenter size-large"><img src="https://mischianti.org/wp-content/uploads/2025/10/Arduino-Mega-and-Ethernet-shield-1024x768.jpg" alt="Arduino Mega with Ethernet shield w5500" class="wp-image-33481"/><figcaption class="wp-element-caption">Arduino Mega with Ethernet shield w5500</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Using Standalone Modules</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>If you have separate W5500 (or W5100) and SD card modules, you'll need to wire them manually. Here are the standard connections for the SPI bus:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Arduino UNO</h4>
+<!-- /wp:heading -->
+
+<!-- wp:image {"lightbox":{"enabled":true},"id":28397,"sizeSlug":"large","linkDestination":"none","align":"center"} -->
+<figure class="wp-block-image aligncenter size-large"><img src="https://mischianti.org/wp-content/uploads/2023/11/Arduino-UNO-pinout-high-resolution-1024x784.jpg" alt="Arduino UNO pinout" class="wp-image-28397"/><figcaption class="wp-element-caption">Arduino UNO pinout</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:table {"hasFixedLayout":false,"className":"table-mischianti mischianti-table-top is-style-regular mischianti-table-left"} -->
+<figure class="wp-block-table table-mischianti mischianti-table-top is-style-regular mischianti-table-left"><table><thead><tr><th>SPI Pin</th><th>UNO Pin</th><th>W5500 Module</th><th>SD Card Module</th></tr></thead><tbody><tr><td><strong>MISO</strong></td><td>12</td><td>MISO</td><td>MISO (DO)</td></tr><tr><td><strong>MOSI</strong></td><td>11</td><td>MOSI</td><td>MOSI (DI)</td></tr><tr><td><strong>SCK</strong></td><td>13</td><td>SCK</td><td>SCK</td></tr><tr><td><strong>CS (Ethernet)</strong></td><td>10 (Default)</td><td>CS</td><td>-</td></tr><tr><td><strong>CS (SD Card)</strong></td><td>4 (Recommended)</td><td>-</td><td>CS</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Arduino Mega</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The Arduino Mega has dedicated SPI pins on the ICSP header, but you can also use the digital pins for convenience.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:table {"hasFixedLayout":false,"className":"table-mischianti mischianti-table-top is-style-regular mischianti-table-left"} -->
+<figure class="wp-block-table table-mischianti mischianti-table-top is-style-regular mischianti-table-left"><table><thead><tr><th>SPI Pin</th><th>Mega Pin</th><th>W5500 Module</th><th>SD Card Module</th></tr></thead><tbody><tr><td><strong>MISO</strong></td><td>50</td><td>MISO</td><td>MISO (DO)</td></tr><tr><td><strong>MOSI</strong></td><td>51</td><td>MOSI</td><td>MOSI (DI)</td></tr><tr><td><strong>SCK</strong></td><td>52</td><td>SCK</td><td>SCK</td></tr><tr><td><strong>CS (Ethernet)</strong></td><td>10 (Default)</td><td>CS</td><td>-</td></tr><tr><td><strong>CS (SD Card)</strong></td><td>4 (Recommended)</td><td>-</td><td>CS</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:image {"id":4040,"sizeSlug":"full","linkDestination":"attachment","align":"center"} -->
+<figure class="wp-block-image aligncenter size-full"><a href="https://mischianti.org/arduino-mega-enc28j60-sd-connection-schema-emailsender/"><img src="https://mischianti.org/wp-content/uploads/2020/05/Arduino-Mega-Enc28j60-SD-connection-schema-EMailSender.jpg" alt="Arduino Mega Enc28j60 SD connection schema EMailSender" class="wp-image-4040"/></a><figcaption class="wp-element-caption">Arduino Mega Enc28j60 SD connection schema EMailSender</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">The Code</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Here is the complete sketch to get the FTP server running. I've added detailed comments to explain each part of the code.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:syntaxhighlighter/code {"language":"arduino"} -->
+<pre class="wp-block-syntaxhighlighter-code">/*
+ * SimpleFTPServer on Arduino Mega/UNO with W5500 Ethernet and SdFat
+ * Author: Renzo Mischianti
+ * Website: www.mischianti.org
+ *
+ */
+
+#include &lt;SPI.h>
+#include &lt;Ethernet.h>
+#include &lt;SdFat.h>
+#include &lt;SimpleFTPServer.h>
+
+// --- Network Configuration ---
+// Enter a MAC address for your controller below.
+// Newer Ethernet shields have a MAC address printed on a sticker.
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+// Set the static IP address to use if the DHCP fails to assign
+IPAddress ip(192, 168, 1, 177);
+
+// --- SD Card Configuration ---
+// The Chip Select pin for the SD card on most Ethernet shields is 4.
+const int SD_CS_PIN = 4;
+// The Chip Select for the Ethernet controller is 10.
+const int ETH_CS_PIN = 10;
+
+// --- Object Instances ---
+SdFat sd;
+FtpServer ftpSrv;
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+  Serial.println("FTP Server starting...");
+
+  // Disable the SD card while initializing Ethernet
+  pinMode(SD_CS_PIN, OUTPUT);
+  digitalWrite(SD_CS_PIN, HIGH);
+
+  // --- Initialize Ethernet ---
+  Serial.println("Trying to get an IP address using DHCP");
+  if (Ethernet.begin(mac) == 0) {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    // Try to configure using static IP address instead:
+    Serial.print("Setting static IP to: ");
+    Serial.println(ip);
+    Ethernet.begin(mac, ip);
+  }
+
+  Serial.print("FTP Server IP address: ");
+  Serial.println(Ethernet.localIP());
+
+  // --- Initialize SD Card ---
+  // It's crucial to initialize the filesystem AFTER the network.
+  Serial.print("Initializing SD card...");
+  if (!sd.begin(SD_CS_PIN)) {
+    Serial.println("Initialization failed!");
+    Serial.println("Things to check:");
+    Serial.println("* is a card inserted?");
+    Serial.println("* is your wiring correct?");
+    Serial.println("* did you change the chipSelect pin to match your shield or module?");
+    while(1); // Halt execution
+  }
+  Serial.println("SD card initialized.");
+
+  // --- Start FTP Server ---
+  // The credentials are "arduino", "arduino"
+  ftpSrv.begin("arduino", "arduino");
+  Serial.println("FTP Server started!");
+}
+
+void loop() {
+  // It's important to let the Ethernet library maintain its connection.
+  // This is especially important for W5500 shields.
+  Ethernet.maintain();
+
+  // This is the most important part. It handles all incoming FTP client requests.
+  // Make sure to call this in every loop.
+  ftpSrv.handleFTP();
+}</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Connecting with an FTP Client</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>1. Open your favorite FTP client (FileZilla, WinSCP, etc.).<br>2. Open the Serial Monitor in the Arduino IDE to see the IP address assigned to your device.<br>3. In your FTP client, enter the following:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li><strong>Host</strong>: The IP address of your Arduino (e.g., <code>192.168.1.177</code>).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Username</strong>: <code>arduino</code> (or what you set in the code).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Password</strong>: <code>arduino</code>.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><strong>Port</strong>: <code>21</code>.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:paragraph -->
+<p>Click connect, and you should see the contents of your SD card's root directory! You can now drag and drop files to upload or download them, create directories, and manage your device's storage remotely.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>You must force only one connection at a time. I use FileZilla as a client, and you can download it <a href="https://filezilla-project.org/">here</a>; It is pretty simple to use and configure.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":2145,"linkDestination":"media","align":"center"} -->
+<figure class="wp-block-image aligncenter"><a href="http://mischianti.org/wp-content/uploads/2019/06/filezillaConfigurationEsp8266_01-e1559639394910.jpg"><img src="http://mischianti.org/wp-content/uploads/2019/06/filezillaConfigurationEsp8266_01-1024x743.jpg" alt="" class="wp-image-2145"/></a><figcaption class="wp-element-caption">Filezilla configuration: select plain FTP on Manage Site</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>First, you must go on <code>Manage site --&gt; New site</code> and now set this parameter:</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li>Select <code>FTP </code>as protocol;</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>Select <code>Use plain FTP (insecure)</code>;</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>Set your login and password (you choose that in the sketch);</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>Than on <code>Trasfer settings</code> select <code>Maximun number of connection</code> equal 1;</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li>Now connect to your device.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:image {"id":2146,"linkDestination":"media","align":"center"} -->
+<figure class="wp-block-image aligncenter"><a href="http://mischianti.org/wp-content/uploads/2019/06/filezillaConfigurationEsp8266_02-e1559639498400.jpg"><img src="http://mischianti.org/wp-content/uploads/2019/06/filezillaConfigurationEsp8266_02-e1559639498400.jpg" alt="" class="wp-image-2146"/></a><figcaption class="wp-element-caption">Filezilla configuration: max number of connections</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Library API Reference</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The <code>SimpleFTPServer</code> library is more than just a basic file server. Let's look at its main functions.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Core Functions</h3>
+<!-- /wp:heading -->
+
+<!-- wp:syntaxhighlighter/code {"language":"arduino"} -->
+<pre class="wp-block-syntaxhighlighter-code">// Constructor
+FtpServer(uint16_t cmdPort = 21, uint16_t pasvPort = 50009);
+
+// Start with username and password
+void begin(const char* user, const char* pass, const char* welcomeMessage = "Welcome");
+
+// Start in anonymous mode
+void begin(const char* welcomeMessage = "Welcome");
+
+// Stop the server
+void end();
+
+// Main handling function (call in loop)
+uint8_t handleFTP();
+
+// Set a static IP for the server to report in PASV mode
+void setLocalIp(IPAddress localIp);
+
+// Change credentials after starting
+void credentials(const char* user, const char* pass);</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:list -->
+<ul class="wp-block-list"><!-- wp:list-item -->
+    <li><code><strong>FtpServer(...)</strong></code>: The constructor. You can optionally specify the command port (default 21) and the passive data port (default 50009).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>begin(user, pass, ...)</strong></code>: Starts the FTP server with mandatory authentication. You can also provide an optional welcome message.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>begin(welcome_message)</strong></code>: An overload that starts the server in anonymous mode (no login required).</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>handleFTP()</strong></code>: This is the engine of the server. It must be called in every <code>loop()</code> to process incoming client commands and manage data transfers.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>end()</strong></code>: Stops the FTP server and disconnects any active client.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>setLocalIp(...)</strong></code>: Use this if your device is behind a NAT and you need to specify a public IP for passive mode.</li>
+    <!-- /wp:list-item -->
+
+    <!-- wp:list-item -->
+    <li><code><strong>credentials(...)</strong></code>: Allows you to change the username and password while the server is running.</li>
+    <!-- /wp:list-item --></ul>
+<!-- /wp:list -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Callback Functions for Advanced Control</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Callbacks allow your sketch to react to FTP server events in real-time. This is incredibly powerful for monitoring, debugging, or triggering other actions.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Connection Status Callback</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The <code>setCallback()</code> function registers a function to be called whenever a client connects, disconnects, or a file operation changes the available disk space.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:syntaxhighlighter/code {"language":"cpp"} -->
+<pre class="wp-block-syntaxhighlighter-code">// Define the callback function
+void ftpCallback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) {
+  switch (ftpOperation) {
+    case FTP_CONNECT:
+      Serial.println("FTP Client connected!");
+      break;
+    case FTP_DISCONNECT:
+      Serial.println("FTP Client disconnected!");
+      break;
+    case FTP_FREE_SPACE_CHANGE:
+      Serial.print("FTP Free space changed: ");
+      Serial.print(freeSpace);
+      Serial.print(" / ");
+      Serial.println(totalSpace);
+      break;
+  }
+};
+
+// In your setup()
+ftpSrv.setCallback(ftpCallback);</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Transfer Status Callback</h4>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The <code>setTransferCallback()</code> function is even more detailed. It lets you monitor the progress of file uploads and downloads, which is perfect for providing feedback, like blinking an LED during a transfer.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:syntaxhighlighter/code {"language":"cpp"} -->
+<pre class="wp-block-syntaxhighlighter-code">// Define the callback function
+void ftpTransferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize) {
+  switch (ftpOperation) {
+    case FTP_UPLOAD_START:
+      Serial.print("FTP Upload started: ");
+      Serial.println(name);
+      break;
+    case FTP_UPLOAD:
+      Serial.print("FTP Uploading: ");
+      Serial.print(name);
+      Serial.print(" -> ");
+      Serial.println(transferredSize);
+      break;
+    case FTP_DOWNLOAD_START:
+      Serial.print("FTP Download started: ");
+      Serial.println(name);
+      break;
+    case FTP_DOWNLOAD:
+      Serial.print("FTP Downloading: ");
+      Serial.print(name);
+      Serial.print(" -> ");
+      Serial.println(transferredSize);
+      break;
+    case FTP_TRANSFER_STOP:
+      Serial.print("FTP Transfer stopped: ");
+      Serial.println(name);
+      break;
+    case FTP_TRANSFER_ERROR:
+      Serial.print("FTP Transfer error: ");
+      Serial.println(name);
+      break;
+  }
+};
+
+// In your setup()
+ftpSrv.setTransferCallback(ftpTransferCallback);</pre>
+<!-- /wp:syntaxhighlighter/code -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Advanced Usage: Remote Firmware Updates</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>One of the most powerful applications of an FTP server is for remote firmware updates (Over-the-Air or OTA updates). The process involves uploading a compiled firmware file (a <code>.bin</code> file) to the SD card via FTP, and then triggering the Arduino to flash itself with the new firmware.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>While a full OTA implementation is beyond the scope of this article, the concept is straightforward and builds directly on the server we've just created. I've written a detailed guide on this topic that you can follow as a next step: <a href="https://www.mischianti.org/2022/09/21/simpleftpserver-how-to-update-firmware-via-ftp-ota-on-esp8266-and-esp32/" target="_blank" rel="noreferrer noopener"><strong>How to update firmware via FTP (OTA) on ESP8266 and ESP32</strong></a>. Although the article focuses on ESP boards, the core principles can be adapted for AVR boards like the Mega using a suitable bootloader (e.g., Optiboot with SD support).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Thanks</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>The SimpleFTPServer library provides a powerful and easy-to-use solution for remote file management on Arduino boards. By combining it with an Ethernet shield and the robust SdFat library, you can build sophisticated projects that are much easier to maintain and update. No more swapping SD cards—just log in and manage your files over the network. This opens up a world of possibilities for data logging, web servers, and remote device management.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:shortcoder/shortcoder -->
+[sc name="github_library_box" library="SimpleFTPServer" ][/sc]
+<!-- /wp:shortcoder/shortcoder -->
+
+<!-- wp:paragraph {"align":"left"} -->
+<p class="has-text-align-left">If this library or article helped your project, consider supporting my work. A simple star on <a href="https://github.com/xreef/SimpleFTPServer" target="_blank" rel="noreferrer noopener">GitHub</a> is a great way to show your appreciation!</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:block {"ref":29007} /-->
+
+<!-- wp:paragraph -->
+<p></p>
+<!-- /wp:paragraph -->

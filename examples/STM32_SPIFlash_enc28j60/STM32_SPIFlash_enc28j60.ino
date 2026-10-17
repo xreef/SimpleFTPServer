@@ -21,7 +21,7 @@
 
 #include <Arduino.h>
 
-#include <EthernetEnc.h>
+#include <EthernetENC.h>
 
 #include "SdFat.h"
 #include "Adafruit_SPIFlash.h"

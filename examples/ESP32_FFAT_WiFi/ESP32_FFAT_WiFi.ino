@@ -8,6 +8,7 @@
  */
 
 #include "Arduino.h"
+#include <WiFi.h>
 #include "FS.h"
 #include "FFat.h"
 
@@ -70,7 +71,14 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint
 
 void setup(void){
   Serial.begin(115200);
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
+  }
+
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
   Serial.println("");
 
   // Wait for connection

@@ -86,14 +86,17 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint
 
 void setup()
 {
-	  // Initialize serial port and wait for it to open before continuing.
+	  // Initialize serial port and wait up to 3s for it to open before continuing.
 	  Serial.begin(115200);
-	  while (!Serial) {
-	    delay(100);
+	  unsigned long start = millis();
+	  while (!Serial && (millis() - start < 3000)) {
+	    delay(10);
 	  }
 	  Serial.println("FTP with external SPIFlash");
 
+	  WiFi.mode(WIFI_STA);
 	  WiFi.begin(ssid, password);
+	  WiFi.setTxPower(WIFI_POWER_11dBm);
 	  Serial.println("");
 
 	  // Wait for connection

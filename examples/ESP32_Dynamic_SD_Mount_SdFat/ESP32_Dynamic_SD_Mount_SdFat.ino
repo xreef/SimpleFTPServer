@@ -52,7 +52,11 @@ void ftpCallback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSp
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
+  }
+  delay(200);
 
   Serial.println("\n\n=================================");
   Serial.println("Dynamic SD Mounting (SdFat2)");
@@ -60,7 +64,9 @@ void setup() {
 
   // Connect to WiFi
   Serial.print("Connecting to WiFi");
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");

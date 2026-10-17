@@ -70,7 +70,10 @@ void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint
 void setup(void){
   Serial.begin(115200);
 
-  while (!Serial) {delay(100);};
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
+  }
 
   WiFi.begin(ssid, password);
   Serial.println("");

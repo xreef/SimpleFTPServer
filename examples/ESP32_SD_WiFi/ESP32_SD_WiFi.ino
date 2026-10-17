@@ -69,11 +69,17 @@ void ftpTransferCallback(FtpTransferOperation ftpOperation, const char* name, ui
 
 void setup() {
   Serial.begin(115200);
+  unsigned long start = millis();
+  while (!Serial && (millis() - start < 3000)) {
+    delay(10);
+  }
   delay(100);
 
   Serial.println();
   Serial.print("Connecting to WiFi '"); Serial.print(WIFI_SSID); Serial.println("'...");
+  WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.setTxPower(WIFI_POWER_11dBm);
 
   // Wait for connection
   uint32_t started = millis();

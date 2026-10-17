@@ -20,7 +20,7 @@
 
 #include <FtpServerKey.h>
 
-#define FTP_SERVER_VERSION "3.0.2 (2025-11-28)"
+#define FTP_SERVER_VERSION "3.0.3 (2026-10-17)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"

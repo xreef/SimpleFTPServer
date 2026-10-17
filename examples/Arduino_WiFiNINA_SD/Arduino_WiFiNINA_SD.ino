@@ -31,7 +31,7 @@ const int CHIP_SELECT_PIN = 10;
 // FTP server instance
 FtpServer ftpSrv;
 
-void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int totalSpace) {
+void _callback(FtpOperation ftpOperation, uint32_t freeSpace, uint32_t totalSpace) {
   switch (ftpOperation) {
     case FTP_CONNECT:
       Serial.println(F("FTP: Client connected!"));
@@ -50,7 +50,7 @@ void _callback(FtpOperation ftpOperation, unsigned int freeSpace, unsigned int t
   }
 }
 
-void _transferCallback(FtpTransferOperation ftpOperation, const char* name, unsigned int transferredSize) {
+void _transferCallback(FtpTransferOperation ftpOperation, const char* name, uint32_t transferredSize) {
   switch (ftpOperation) {
     case FTP_UPLOAD_START:
       Serial.print(F("FTP: Upload start -> "));

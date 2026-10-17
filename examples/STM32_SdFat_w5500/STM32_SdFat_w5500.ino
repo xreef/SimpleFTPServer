@@ -1,4 +1,4 @@
-l /**
+/**
  * SimpleFTPServer ^1.3.0 on STM32 (need FLASH > 64K)
  * and ethernet w5500
  * SD connected on secondary SPI or primary
@@ -22,7 +22,7 @@ l /**
 #include <sdios.h>
 #include <Ethernet.h>
 
-#include <SimpleFtpServer.h>
+#include <SimpleFTPServer.h>
 
 // To use SD with primary SPI
 // #define SD_CS_PIN PA4
