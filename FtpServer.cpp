@@ -51,6 +51,15 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+// Network classes of the ESP cores (WiFiServer/WiFiClient): hasClient() exists
+// and connect() blocks until it succeeds or its own timeout expires.
+#if (defined(ESP32) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP32_ETH || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC)) || \
+    (defined(ESP8266) && (FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_242 || FTP_SERVER_NETWORK_TYPE == NETWORK_ESP8266_ASYNC))
+  #define FTP_ESP_NETWORK_CLASSES 1
+#else
+  #define FTP_ESP_NETWORK_CLASSES 0
+#endif
+
 #if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
 template <typename S>
 static auto wifiNinaAccept(S &srv, int) -> decltype(srv.accept()) {
@@ -214,6 +223,8 @@ void FtpServer::begin( const char * _user, const char * _pass, const char * _wel
                 DEBUG_PRINTER.println(F("WARNING: WiFiNINA firmware < 1.5.0 detected! Please upgrade NINA firmware (>= 1.5.0) for WiFiServer::accept() FTP support."));
             }
         }
+    #elif FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiS3
+        DEBUG_PRINTLN(F("WiFiS3 (UNO R4 WiFi)"));
     #elif FTP_SERVER_NETWORK_TYPE == NETWORK_SEEED_RTL8720DN
         DEBUG_PRINTLN(F("Seeed RTL8720DN"));
     #else
@@ -449,8 +460,20 @@ uint8_t FtpServer::handleFTP() {
 
 			cmdStage = FTP_Init;
 		}
+#if FTP_ESP_NETWORK_CLASSES && (FTP_IDLE_PREEMPT_MS > 0)
+		// Another client is waiting and this logged-in session is idle: let the new one in
+		// (millisEndConnection - FTP_TIME_OUT = time of the last command or data received)
+		else if (cmdStage == FTP_Cmd && transferStage == FTP_Close && !client.available()
+				&& (int32_t)(millis() - (millisEndConnection - 1000L * FTP_TIME_OUT)) > (int32_t)FTP_IDLE_PREEMPT_MS
+				&& ftpServer.hasClient()) {
+			DEBUG_PRINTLN(F("New FTP client waiting while current session is idle -> switching client"));
+			disconnectClient();
+			cmdStage = FTP_Init;
+		}
+#endif
 		if (transferStage == FTP_Retrieve)   // Retrieve data
 				{
+			millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
 			if (!doRetrieve()) {
 				transferStage = FTP_Close;
 			}
@@ -469,11 +492,13 @@ uint8_t FtpServer::handleFTP() {
 			}
 		} else if (transferStage == FTP_List || transferStage == FTP_Nlst) // LIST or NLST
 				{
+			millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
 			if (!doList()) {
 				transferStage = FTP_Close;
 			}
 		} else if (transferStage == FTP_Mlsd)  // MLSD listing
 				{
+			millisEndConnection = millis() + 1000L * FTP_TIME_OUT;
 			if (!doMlsd()) {
 
 				transferStage = FTP_Close;
@@ -1082,41 +1107,43 @@ bool FtpServer::processCommand()
 #endif
 #endif
 
-      bool open;
-
-      // If STOR and file exists we remove it first to ensure overwrite
-      if (CommandIs("STOR") && exists(path)) {
-        DEBUG_PRINTLN(F("STOR - existing file will be removed for overwrite"));
-        // try to remove; ignore result, openFile with create should still work
-        remove(path);
-      }
-
-      if( exists( path )) {
-        DEBUG_PRINTLN(F("APPEND FILE!!"));
-        open = openFile( path, ( CommandIs( "APPE" ) ? FTP_FILE_WRITE_APPEND : FTP_FILE_WRITE_CREATE ));
-      } else {
-        DEBUG_PRINTLN(F("CREATE FILE!!"));
-        open = openFile( path, FTP_FILE_WRITE_CREATE );
-      }
-
       // Ensure any previous data connection is closed before starting
       data.stop();
 
-      DEBUG_PRINT(F("open/create "));
-      DEBUG_PRINTLN(open);
-      if( ! open ){
-        client.print( F("451 Can't open/create ") ); client.println( parameter );
-        // ensure no dangling file
-        file.close();
+      // Open the data connection before touching the file: when it fails (425)
+      // an existing file must be left intact, not removed or truncated
+      if( ! dataConnect( false )) {
+        // dataConnect already sends a 425 No data connection when it fails
+        DEBUG_PRINTLN(F("Data connection failed for STOR/APPE"));
         transferStage = FTP_Close;
       } else {
-        // Try to establish data connection (this will also send 150 if successful)
-        if( ! dataConnect()) {
-          // dataConnect already sends a 425 No data connection when it fails
-          DEBUG_PRINTLN(F("Data connection failed for STOR/APPE"));
+        bool open;
+
+        // If STOR and file exists we remove it first to ensure overwrite
+        if (CommandIs("STOR") && exists(path)) {
+          DEBUG_PRINTLN(F("STOR - existing file will be removed for overwrite"));
+          // try to remove; ignore result, openFile with create should still work
+          remove(path);
+        }
+
+        if( exists( path )) {
+          DEBUG_PRINTLN(F("APPEND FILE!!"));
+          open = openFile( path, ( CommandIs( "APPE" ) ? FTP_FILE_WRITE_APPEND : FTP_FILE_WRITE_CREATE ));
+        } else {
+          DEBUG_PRINTLN(F("CREATE FILE!!"));
+          open = openFile( path, FTP_FILE_WRITE_CREATE );
+        }
+
+        DEBUG_PRINT(F("open/create "));
+        DEBUG_PRINTLN(open);
+        if( ! open ){
+          client.print( F("451 Can't open/create ") ); client.println( parameter );
+          // ensure no dangling file or data connection
           file.close();
+          data.stop();
           transferStage = FTP_Close;
         } else {
+          client.print( F("150 Accepted data connection to port ") ); client.println( dataPort );
           DEBUG_PRINT( F(" Receiving ") ); DEBUG_PRINTLN( parameter );
 
           millisBeginTrans = millis();
@@ -1380,10 +1407,12 @@ int FtpServer::dataConnect( bool out150 )
   if( ! data.connected()) {
     if( dataConn == FTP_Pasive )
     {
-      // wait up to 30 seconds for passive data connection (use millis-based timeout)
+      // wait for the passive data connection (FTP_DATA_CONNECT_TIMEOUT_MS, then a shorter retry):
+      // handleFTP() is blocked meanwhile, so the total must stay below the client timeout
       uint32_t start = millis();
-      const uint32_t timeout_ms = 30000UL; // 30 seconds
-      while( ! data.connected() && (uint32_t)(millis() - start) < timeout_ms )
+      const uint32_t timeout_ms = FTP_DATA_CONNECT_TIMEOUT_MS;
+      const uint32_t retry_timeout_ms = FTP_DATA_CONNECT_TIMEOUT_MS / 2;
+      while( ! data.connected() && client.connected() && (uint32_t)(millis() - start) < timeout_ms )
       {
         #if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
               data = wifiNinaAccept(dataServer, 0);
@@ -1399,7 +1428,7 @@ int FtpServer::dataConnect( bool out150 )
         delay( 1 );
       }
 
-      if (!data.connected()) {
+      if (!data.connected() && client.connected()) {
         DEBUG_PRINTLN(F("Passive accept timed out, retrying listener once"));
         // Try to restart listener and give it another chance (single retry)
         #if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
@@ -1410,7 +1439,7 @@ int FtpServer::dataConnect( bool out150 )
         dataServer.begin();
         #endif
         uint32_t start2 = millis();
-        while( ! data.connected() && (uint32_t)(millis() - start2) < timeout_ms )
+        while( ! data.connected() && client.connected() && (uint32_t)(millis() - start2) < retry_timeout_ms )
         {
           #if (FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
                 data = wifiNinaAccept(dataServer, 0);
@@ -1435,19 +1464,21 @@ int FtpServer::dataConnect( bool out150 )
     else if( dataConn == FTP_Active )
     {
       data.connect( dataIp, dataPort );
+#if !FTP_ESP_NETWORK_CLASSES
       // give a small window for active connect to succeed
+      // (on the ESP cores connect() already blocks with its own timeout)
       uint32_t start = millis();
-      const uint32_t timeout_ms = 10000UL; // 10 seconds for active connect
-      while( ! data.connected() && (uint32_t)(millis() - start) < timeout_ms ) {
+      while( ! data.connected() && (uint32_t)(millis() - start) < FTP_DATA_CONNECT_TIMEOUT_MS ) {
         delay(1);
       }
+#endif
     }
   }
 
   // If connected, attempt to set NoDelay where supported to avoid Nagle delays
   #if (defined(ESP8266) || defined(ESP32) || FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiNINA)
     // some client classes expose setNoDelay
-    #if (defined(ESP8266) || defined(ESP32))
+    #if FTP_ESP_NETWORK_CLASSES   // WiFiClient of the ESP cores only (EthernetClient has no setNoDelay)
       if (data.connected()) data.setNoDelay(true);
     #endif
   #endif
@@ -1559,10 +1590,21 @@ bool FtpServer::openDir( FTP_DIR * pdir )
 
 bool FtpServer::doRetrieve()
 {
-  if( ! dataConnected())
+  // Query the connection once (WiFiS3 can answer differently to two calls in a row).
+  // The client may close it as soon as it has the whole file (e.g. curl, which
+  // knows the size from SIZE): that is a completed transfer, not an abort.
+  if( ! data.connected())
   {
-    file.close();
-    return false;
+    if( bytesTransfered >= fileSize( file ))
+    {
+      closeTransfer();
+      return false;
+    }
+    if( ! dataConnected())
+    {
+      file.close();
+      return false;
+    }
   }
 
   // Handle resume if REST was used
@@ -1605,8 +1647,10 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINTLN(written);
 
     if (written <= 0) {
+      // the file was not sent completely: 426, never 226 (e.g. WiFiNINA closes
+      // the socket when the module does not accept the data, seen in active mode)
       DEBUG_PRINTLN(F("ERROR: data.write returned <= 0"));
-      closeTransfer();
+      abortTransfer();
       return false;
     }
 
@@ -1641,13 +1685,18 @@ bool FtpServer::doRetrieve()
     DEBUG_PRINT(F("DATA CONNECTED AFTER WRITE -> "));
     DEBUG_PRINTLN(data.connected() ? 1 : 0);
 
+    bytesTransfered += written;
+
     if (!data.connected()) {
       DEBUG_PRINTLN(F("Data socket closed by peer after write"));
-      closeTransfer();
+      // complete only if the whole file was handed to the socket
+      if( bytesTransfered >= fileSize( file )) {
+        closeTransfer();
+      } else {
+        abortTransfer();
+      }
       return false;
     }
-
-    bytesTransfered += written;
 
 	  if (FtpServer::_transferCallback) {
 		  FtpServer::_transferCallback(FTP_DOWNLOAD, getFileName(&file).c_str(), bytesTransfered);
@@ -1666,27 +1715,16 @@ bool FtpServer::doStore()
 {
   int16_t na = data.available();
   if( na == 0 ) {
-    DEBUG_PRINTLN(F("NO DATA AVAILABLE!"));
-
-    // If socket is connected but no data yet, wait a short time (to tolerate small pauses)
     if( data.connected()) {
-      uint16_t waitMs = 5000; // wait up to 5 seconds for first data chunk
-      uint16_t waited = 0;
-      while (data.connected() && data.available() == 0 && waited < waitMs) {
-        delay(10);
-        waited += 10;
-      }
-      na = data.available();
-      if (na == 0) {
-        // still nothing after waiting
-        DEBUG_PRINT(F("No data received after "));
-        DEBUG_PRINT(waited);
-        DEBUG_PRINTLN(F(" ms"));
-        // Decide to close transfer to avoid infinite loop and client timeout
-        closeTransfer();
+      // Nothing received yet: go back to the main loop instead of blocking here.
+      // Abort if the client keeps the data connection open without sending
+      // (millisEndConnection - FTP_TIME_OUT = time of STOR or of the last data received).
+      if( (int32_t)( millis() - ( millisEndConnection - 1000L * FTP_TIME_OUT )) > (int32_t)FTP_TRANSFER_STALL_TIMEOUT_MS ) {
+        DEBUG_PRINTLN(F("Upload stalled: no data received, transfer aborted"));
+        abortTransfer();
         return false;
       }
-      // else continue and read available data below
+      return true;
     }
 #if FTP_SERVER_NETWORK_TYPE_SELECTED == NETWORK_SEEED_RTL8720DN
     else {
@@ -1721,6 +1759,7 @@ bool FtpServer::doStore()
   int16_t rc = 0;
   if( nb > 0 )
   {
+    millisEndConnection = millis() + 1000L * FTP_TIME_OUT; // data received: restart stall and idle timers
 	    DEBUG_PRINT(F("NB -> "));
 	    DEBUG_PRINTLN(nb);
 
@@ -2281,7 +2320,15 @@ void FtpServer::closeTransfer()
     delay(10);
   #endif
 
+#if FTP_SERVER_NETWORK_TYPE == NETWORK_W5100
+  // Ethernet library: stop() waits only 1 s for the client to close, then resets
+  // the connection and the end of the file a slow client has not read yet is lost
+  data.setConnectionTimeout( FTP_DATA_CLOSE_TIMEOUT_MS );
   data.stop();
+  data.setConnectionTimeout( 1000 );
+#else
+  data.stop();
+#endif
 
   if( deltaT > 0 && bytesTransfered > 0 )
   {
@@ -2338,7 +2385,7 @@ int32_t FtpServer::readChar()
 {
   int32_t rc = -1;
 
-  if( client.available())
+  while( client.available() && rc == -1 )
   {
     char c = client.read();
     DEBUG_PRINT("-");

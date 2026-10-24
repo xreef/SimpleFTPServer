@@ -20,7 +20,7 @@
 
 #include <FtpServerKey.h>
 
-#define FTP_SERVER_VERSION "3.0.3 (2026-10-17)"
+#define FTP_SERVER_VERSION "3.0.4 (2026-10-23)"
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -60,6 +60,9 @@
 	#elif defined(ARDUINO_ARCH_SAMD)
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_SAMD
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_SAMD
+	#elif defined(ARDUINO_UNOR4_WIFI) || defined(ARDUINO_ARCH_RENESAS_UNO) || defined(ARDUINO_ARCH_RENESAS)
+		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_RENESAS
+		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_RENESAS
 	#else
 		#define FTP_SERVER_NETWORK_TYPE DEFAULT_FTP_SERVER_NETWORK_TYPE_ARDUINO
 		#define STORAGE_TYPE DEFAULT_STORAGE_TYPE_ARDUINO
@@ -230,6 +233,12 @@
 	#define NET_CLASS WiFi
 //	#define CommandIs( a ) ( ! strcmp_PF( command, PSTR( a )))
 //	#define ParameterIs( a ) ( ! strcmp_PF( parameter, PSTR( a )))
+#elif(FTP_SERVER_NETWORK_TYPE == NETWORK_WiFiS3)
+
+	#include <WiFiS3.h>
+	#define FTP_CLIENT_NETWORK_CLASS WiFiClient
+	#define FTP_SERVER_NETWORK_SERVER_CLASS WiFiServer
+	#define NET_CLASS WiFi
 #elif(FTP_SERVER_NETWORK_TYPE == NETWORK_SEEED_RTL8720DN)
 
 	#include <rpcWiFi.h>

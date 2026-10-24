@@ -51,6 +51,7 @@
 #define NETWORK_ETHERNET_STM 	(12)
 #define NETWORK_UIPETHERNET 	(13)	// UIPEthernet library same of NETWORK_ENC28J60
 #define NETWORK_ETHERNET_GENERIC	(14)	// Ethernet generic
+#define NETWORK_WiFiS3			(16)	// Arduino UNO R4 WiFi standard WiFiS3 library
 
 // esp8266 configuration
 #ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_ESP8266
@@ -120,6 +121,14 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 	#define DEFAULT_STORAGE_TYPE_SAMD 					STORAGE_SD
 #endif
 
+// Arduino Renesas (UNO R4 WiFi) configuration
+#ifndef DEFAULT_FTP_SERVER_NETWORK_TYPE_RENESAS
+	#define DEFAULT_FTP_SERVER_NETWORK_TYPE_RENESAS 	NETWORK_WiFiS3
+#endif
+#ifndef DEFAULT_STORAGE_TYPE_RENESAS
+	#define DEFAULT_STORAGE_TYPE_RENESAS 				STORAGE_SD
+#endif
+
 #define UTF8_SUPPORT
 
 //#define SD_CS_PIN 4
@@ -132,6 +141,37 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 // Wait for authentication for 10 seconds (expressed in seconds)
 #ifndef FTP_AUTH_TIME_OUT
 	#define FTP_AUTH_TIME_OUT 10
+#endif
+
+// Max time (ms) to wait for the data connection: the client connecting to the
+// passive port (PASV/EPSV), or an active connection (PORT) succeeding. When it
+// expires the server answers 425. handleFTP() blocks while waiting, so keep it
+// well below the client timeout (FileZilla: 20 s).
+#ifndef FTP_DATA_CONNECT_TIMEOUT_MS
+	#define FTP_DATA_CONNECT_TIMEOUT_MS 5000
+#endif
+
+// NETWORK_W5100 only: at the end of a transfer, max time (ms) to wait for the
+// client to close the data connection before the Ethernet library resets it
+// (with its default of 1 s a slow client loses the end of the file).
+#ifndef FTP_DATA_CLOSE_TIMEOUT_MS
+	#define FTP_DATA_CLOSE_TIMEOUT_MS 5000
+#endif
+
+// Abort an upload (426) when the client keeps the data connection open but
+// sends nothing for this time (ms).
+#ifndef FTP_TRANSFER_STALL_TIMEOUT_MS
+	#define FTP_TRANSFER_STALL_TIMEOUT_MS 10000
+#endif
+
+// The server handles one control connection at a time. When another client is
+// waiting and the current logged-in session is idle (no command, no transfer)
+// for this time (ms), the idle session is closed and the waiting client is
+// accepted: FileZilla, for example, opens extra connections for transfers.
+// 0 disables it. Used only with network classes that provide hasClient()
+// (ESP32 WiFi/ETH and ESP8266 WiFi).
+#ifndef FTP_IDLE_PREEMPT_MS
+	#define FTP_IDLE_PREEMPT_MS 1500
 #endif
 
 // Uncomment to enable dynamic transfer buffer
