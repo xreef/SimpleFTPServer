@@ -2,6 +2,24 @@
 
 Tutte le modifiche importanti al progetto `SimpleFTPServer` vengono documentate in questo file.
 
+## [3.0.4] - 2026-10-23
+### Stabilità con FileZilla e client multipli, nessun blocco lungo di `handleFTP()`, nessun file troncato o cancellato con esito positivo (`+0 byte` di SRAM, ~`+250 byte` di flash su ESP32):
+
+- **Timeout configurabili in `FtpServerKey.h`**: `FTP_DATA_CONNECT_TIMEOUT_MS` (5000), `FTP_TRANSFER_STALL_TIMEOUT_MS` (10000), `FTP_IDLE_PREEMPT_MS` (1500, `0` = disattivato).
+- **`dataConnect()` passivo**: attesa della connessione dati ridotta da `30 s + 30 s` a `FTP_DATA_CONNECT_TIMEOUT_MS` + metà (7,5 s), interrotta se il client di controllo si disconnette. Prima `handleFTP()` restava bloccato fino a 60 s, oltre il timeout di FileZilla (20 s).
+- **`dataConnect()` attivo (`PORT`)**: sui core ESP rimosso il ciclo di attesa di 10 s dopo `connect()` (che è già bloccante con il suo timeout): `425` in ~3 s invece di ~13 s.
+- **`doStore()` non bloccante**: rimossa l'attesa fino a 5 s quando il buffer TCP è vuoto, che poi chiudeva l'upload con `226` e **file troncato** se il client faceva una pausa. Ora l'upload resta aperto e viene annullato con `426` (callback `FTP_TRANSFER_ERROR`) solo dopo `FTP_TRANSFER_STALL_TIMEOUT_MS` senza dati.
+- **Preemption della sessione inattiva** (ESP32 WiFi/ETH, ESP8266): se un secondo client è in attesa e la sessione autenticata corrente è ferma da `FTP_IDLE_PREEMPT_MS`, la sessione inattiva viene chiusa (`221`) e il nuovo client accettato. Prima il nuovo client aspettava fino a `FTP_TIME_OUT` (5 min) e FileZilla andava in timeout sul messaggio di benvenuto.
+- **`readChar()`**: legge tutta la riga di comando disponibile in una chiamata invece di un carattere per chiamata (utile negli sketch che chiamano `handleFTP()` di rado, es. durante la riproduzione audio).
+- **Fix compilazione ESP32/ESP8266 + Ethernet** (`W5100`, `ENC28J60`, es. `ESP32_FFAT_enc28j60`): `setNoDelay()` (e le nuove funzioni sopra) usati solo con le classi `WiFiClient`/`WiFiServer` dei core ESP (`FTP_ESP_NETWORK_CLASSES`) e non con `EthernetClient`.
+- **`STOR` fallito non cancella più il file esistente**: la connessione dati viene aperta *prima* di rimuovere/ricreare il file. Prima uno `STOR` che finiva con `425` (es. modalità attiva bloccata dal firewall del PC) lasciava il file esistente a 0 byte. Verificato su ESP32 (LittleFS), Mega 2560 (W5100 + SD) e Nano 33 IoT (WiFiNINA + SD).
+- **Download interrotto segnalato con `426` invece di `226`**: in `doRetrieve()`, se `data.write()` fallisce o la connessione dati si chiude prima della fine del file, il server risponde `426 Transfer aborted` (callback `FTP_TRANSFER_ERROR`) invece di `226 File successfully transferred` con il file troncato. Caso reale: Nano 33 IoT in modalità attiva (`PORT`) verso un ricevente più lento, dove il modulo NINA chiude la connessione dati dopo ~12 KB; in modalità passiva lo stesso trasferimento va a buon fine.
+- **Download completo non più segnalato con `426`**: se il client chiudeva la connessione dati appena ricevuto l'ultimo byte (es. curl, che conosce la dimensione da `SIZE`), il server poteva rispondere `426 Data connection closed` a un file arrivato intero. Ora `doRetrieve()` interroga la connessione una sola volta per ciclo (con WiFiS3 due chiamate consecutive a `connected()` possono dare risposte diverse) e, se il client ha chiuso dopo aver ricevuto tutto il file, risponde `226`. Verificato su UNO R4 WiFi: da 11 falsi `426` su 100 download a 0 su 140.
+- **Download verso client lenti non più troncati con `NETWORK_W5100`**: a fine trasferimento `EthernetClient::stop()` aspettava solo 1 s la chiusura del client e poi resettava la connessione, così un client che leggeva lentamente perdeva la fine del file mentre il server rispondeva `226`. Ora `closeTransfer()` aspetta fino a `FTP_DATA_CLOSE_TIMEOUT_MS` (5000, in `FtpServerKey.h`). Verificato su Mega 2560 + W5100: un client a 1,3 KB/s riceveva 5888 byte su 8192, ora riceve il file intero.
+- **Supporto di rete `NETWORK_WiFiS3`** (Arduino UNO R4 WiFi, libreria `WiFiS3`), selezionato di default sull'architettura Renesas (`DEFAULT_FTP_SERVER_NETWORK_TYPE_RENESAS`, `DEFAULT_STORAGE_TYPE_RENESAS`). Verificato su UNO R4 WiFi + SD: suite live 10/10, upload/download con curl in modalità passiva e attiva.
+
+---
+
 ## [3.0.3] - 2026-10-17
 ### Correzioni di bug, conformità RFC e miglioramenti prestazionali (con `+0 byte` di overhead SRAM su AVR):
 
