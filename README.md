@@ -1,4 +1,4 @@
-# SimpleFTPServer Library 3.0.4
+# SimpleFTPServer Library 3.0.5
 
 ![SimpleFTPServer Logo](resources/SimpleFTPServerLogo.png)
 
@@ -43,7 +43,7 @@ Complete tutorials and platform-specific guides by the author are available on m
 - Expose device filesystem via a single FTP session (upload, download, delete, rename, list)
 - Resume support (REST) and RFC-like commands (ALLO, STAT, SYST, HELP)
 - Passive (`PASV`, `EPSV`) and active (`PORT`) data connections
-- A second client (e.g. a FileZilla transfer connection) is accepted when the current session is idle (ESP32/ESP8266 WiFi)
+- A second client (e.g. a FileZilla transfer connection) is accepted when the current session is idle (ESP32/ESP8266 WiFi, WiFiNINA, WiFiS3)
 - UTF-8 filename support (configurable)
 - Configurable buffers and timeouts via `FtpServerKey.h`
 - Works with internal flash filesystems (SPIFFS, LittleFS, FFAT) and external SD (SD, SdFat)
@@ -147,7 +147,7 @@ See `FtpServerKey.h` for config defines and defaults. Key settings:
 - `FTP_DATA_CONNECT_TIMEOUT_MS` — max wait for the data connection, passive or active (default `5000`); `handleFTP()` blocks meanwhile, so keep it well below the client timeout (FileZilla: 20 s)
 - `FTP_TRANSFER_STALL_TIMEOUT_MS` — an upload with no data for this time is aborted with `426` (default `10000`)
 - `FTP_DATA_CLOSE_TIMEOUT_MS` — `NETWORK_W5100` only: max wait for the client to close the data connection at the end of a transfer before the Ethernet library resets it (default `5000`; with the library default of 1 s a slow client lost the end of the file)
-- `FTP_IDLE_PREEMPT_MS` — ESP32/ESP8266 WiFi only: when another client is waiting and the logged-in session has been idle for this time, the idle session is closed and the new client accepted (default `1500`, `0` disables it)
+- `FTP_IDLE_PREEMPT_MS` — ESP32/ESP8266 WiFi, WiFiNINA and WiFiS3: when another client is waiting and the logged-in session has been idle for this time, the idle session is closed and the new client accepted (default `1500`, `0` disables it)
 - `FTP_SERVER_DEBUG` — enable debug messages (e.g. `-D FTP_SERVER_DEBUG` in `build_flags`)
 - `DEBUG_PRINTER` — debug output stream (defaults to `Serial`)
 - `UTF8_SUPPORT` — enable/disable UTF-8 support
@@ -163,6 +163,10 @@ With WiFiNINA (Arduino Nano 33 IoT, MKR WiFi 1010) the NINA module can close an 
 See the `examples/` folder for ready-to-use sketches for many platforms (ESP32, ESP8266, RP2040, STM32, Wio Terminal, Arduino). Adapt SSID, credentials and SD pins as needed.
 
 ## 📝 Changelog
+- 2026-11-05 3.0.5
+  - `NETWORK_WiFiNINA` and `NETWORK_WiFiS3`: throttle control-socket polling (`readChar()` / `client.connected()`) to 250 ms during active data transfers to avoid SPI/UART bus contention with the radio module
+  - `NETWORK_WiFiNINA` and `NETWORK_WiFiS3`: add idle-session preemption (`FTP_IDLE_PREEMPT_MS`) via periodic `accept()` polling every 250 ms when the current session is idle
+  - `doRetrieve()` on `NETWORK_WiFiNINA` and `NETWORK_WiFiS3`: retry `data.write()` for up to 2000 ms under TCP backpressure before aborting with `426`, skip redundant pre/post-write `data.connected()` queries and `delay(1)` on `WiFiS3`, and complete cleanly with `226` when `bytesTransfered >= fileSize(file)`
 - 2026-10-23 3.0.4
   - Add `FTP_DATA_CONNECT_TIMEOUT_MS`, `FTP_TRANSFER_STALL_TIMEOUT_MS` and `FTP_IDLE_PREEMPT_MS` in `FtpServerKey.h`: waiting for the passive/active data connection no longer blocks `handleFTP()` beyond the FileZilla timeout (it was up to 60 s)
   - Non-blocking `doStore()`: a pause during an upload no longer ends it with `226` and a truncated file; an upload with no data for `FTP_TRANSFER_STALL_TIMEOUT_MS` is aborted with `426`

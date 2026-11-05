@@ -168,8 +168,7 @@ https://github.com/arduino-libraries/Ethernet/issues/88
 // waiting and the current logged-in session is idle (no command, no transfer)
 // for this time (ms), the idle session is closed and the waiting client is
 // accepted: FileZilla, for example, opens extra connections for transfers.
-// 0 disables it. Used only with network classes that provide hasClient()
-// (ESP32 WiFi/ETH and ESP8266 WiFi).
+// 0 disables it. Supported on ESP32 WiFi/ETH, ESP8266 WiFi, WiFiNINA and WiFiS3.
 #ifndef FTP_IDLE_PREEMPT_MS
 	#define FTP_IDLE_PREEMPT_MS 1500
 #endif

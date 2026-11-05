@@ -2,6 +2,18 @@
 
 Tutte le modifiche importanti al progetto `SimpleFTPServer` vengono documentate in questo file.
 
+## [3.0.5] - 2026-11-05
+### Ottimizzazione trasferimenti, gestione backpressure TCP e preemption sessione inattiva per `NETWORK_WiFiNINA` e `NETWORK_WiFiS3`:
+
+- **Throttling del polling sul canale di controllo durante i trasferimenti (`NETWORK_WiFiNINA` e `NETWORK_WiFiS3`)**: durante un trasferimento dati attivo (`transferStage != FTP_Close`), la verifica di nuovi comandi (`readChar()`) e dello stato della connessione di controllo (`client.connected()`) viene eseguita ogni 250 ms anziché a ogni iterazione di `handleFTP()`, riducendo il traffico SPI/UART verso il coprocessore radio (NINA-W102 / ESP32-S3) e migliorando stabilità e throughput.
+- **Preemption della sessione inattiva estesa a `NETWORK_WiFiNINA` e `NETWORK_WiFiS3`**: quando la sessione autenticata corrente è inattiva (`cmdStage == FTP_Cmd && transferStage == FTP_Close`) da oltre `FTP_IDLE_PREEMPT_MS`, il server controlla ogni 250 ms tramite `accept()` (`wifiNinaAccept` su WiFiNINA) l'eventuale presenza di un nuovo client in attesa e, se connesso, chiude la sessione inattiva (`221`) passando a quella nuova.
+- **Gestione backpressure TCP e riduzione chiamate `data.connected()` in `doRetrieve()` per `NETWORK_WiFiNINA` e `NETWORK_WiFiS3`**:
+  - Aggiunto ciclo di retry fino a 2000 ms (con `delay(2)`) su `data.write(buf, nb)` quando il buffer di trasmissione del modulo WiFi è temporaneamente saturo (`written == 0` ma socket ancora connesso), evitando falsi abort `426`.
+  - Se `written <= 0` ma tutti i byte del file sono già stati trasferiti (`bytesTransfered >= fileSize(file)`), il trasferimento viene chiuso correttamente con `closeTransfer()` (`226`) anziché `abortTransfer()` (`426`).
+  - Evitate le interrogazioni `data.connected()` a inizio ciclo e dopo ogni scrittura completa su `WiFiNINA` e `WiFiS3` (controllando `!data.connected()` dopo la scrittura solo in caso di scrittura parziale `written < nb`) e rimosso `delay(1)` su `NETWORK_WiFiS3`.
+
+---
+
 ## [3.0.4] - 2026-10-23
 ### Stabilità con FileZilla e client multipli, nessun blocco lungo di `handleFTP()`, nessun file troncato o cancellato con esito positivo (`+0 byte` di SRAM, ~`+250 byte` di flash su ESP32):
 
